@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIIF System | Painel Administrativo</title>
+    <meta name="description"
+        content="Painel administrativo do GIIF System para gestão de usuários, billing, health monitor e consultores.">
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Admin Styles -->
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <!-- ===== TOAST CONTAINER ===== -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ===== LOGIN SCREEN ===== -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-card">
+            <div class="login-logo">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h1 class="login-title">GIIF<span style="color:var(--brand-500)">System</span> <span
+                    class="login-badge">Admin</span></h1>
+            <p class="login-subtitle">Acesso restrito ao painel de controle administrativo</p>
+
+            <form class="login-form" onsubmit="adminLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">E-mail Administrativo</label>
+                    <input type="email" id="login-email" class="form-input" placeholder="admin@giif.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chave de Acesso</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
+                        <button type="button" class="password-toggle-btn"
+                            onclick="togglePasswordVisibility('login-password', this.querySelector('i'))"
+                            tabindex="-1"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                </div>
+                <div id="login-error" class="login-error">Credenciais inválidas.</div>
+                <button type="submit" id="login-btn" class="login-btn">
+                    Acessar Painel <i class="fa-solid fa-chevron-right" style="font-size:0.7rem"></i>
+                </button>
+                <p style="text-align:center;font-size:0.7rem;color:var(--text-muted);margin-top:1.5rem;font-weight:600">
+                    Ambiente exclusivo para administradores do GIIF System.
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== MAIN APP ===== -->
+    <div id="admin-app" class="admin-layout hidden">
+
+        <!-- SIDEBAR -->
+        <aside class="admin-sidebar">
+            <div>
+                <div class="sidebar-header">
+                    <div class="sidebar-logo"><i class="fa-solid fa-shield-halved"></i></div>
+                    <span class="sidebar-brand">GIIF<span>Admin</span></span>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <div class="nav-group">
+                        <p class="nav-group-label">Visão Geral</p>
+                        <button onclick="navToAdmin('dashboard')" id="nav-dashboard" class="nav-btn active">
+                            <div class="nav-icon"><i class="fa-solid fa-chart-pie"></i></div> Dashboard
+                        </button>
+                    </div>
+
+                    <div class="nav-group">
+                        <p class="nav-group-label">Gerenciamento</p>
+                        <button onclick="navToAdmin('users')" id="nav-users" class="nav-btn">
+                            <div class="nav-icon"><i class="fa-solid fa-users"></i></div> Usuários
+                        </button>
+                        <button onclick="navToAdmin('tickets')" id="nav-tickets" class="nav-btn"
+                            style="position:relative; display:flex; align-items:center;">
+                            <div class="nav-icon"><i class="fa-solid fa-headset"></i></div> Interações / Tickets
+                            <span id="sidebar-ticket-badge" class="plan-badge bg-amber"
+                                style="display:none; position:absolute; right:10px; font-size:10px; padding:2px 6px;">0</span>
+                        </button>
+                        <button onclick="navToAdmin('billing')" id="nav-billing" class="nav-btn">
+                            <div class="nav-icon"><i class="fa-solid fa-coins"></i></div> Custos & Billing
+                        </button>
+                    </div>
+
+                    <div class="nav-group">
+                        <p class="nav-group-label">Inteligência</p>
+                        <button onclick="navToAdmin('health')" id="nav-health" class="nav-btn">
+                            <div class="nav-icon"><i class="fa-solid fa-heart-pulse"></i></div> Health Monitor
+                        </button>
+                        <button onclick="navToAdmin('consultants')" id="nav-consultants" class="nav-btn">
+                            <div class="nav-icon"><i class="fa-solid fa-user-tie"></i></div> Consultores
+                        </button>
+                    </div>
+                </nav>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user" onclick="adminLogout()">
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-avatar"><span id="admin-user-initials">AD</span></div>
+                        <div>
+                            <p class="sidebar-user-name" id="admin-user-name">Admin</p>
+                            <p class="sidebar-user-role">Sair do painel</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right-from-bracket logout-icon"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="admin-main">
+            <!-- HEADER -->
+            <header class="admin-header">
+                <div class="admin-breadcrumb">
+                    GIIF Admin <span style="margin:0 0.75rem;opacity:0.3">/</span> <span id="breadcrumb-current"
+                        class="current">Dashboard</span>
+                </div>
+                <div class="header-actions">
+                    <div class="header-badge">
+                        <div class="dot"></div> Painel Administrativo
+                    </div>
+                    <button class="btn-icon" onclick="toggleAdminTheme()">
+                        <i id="theme-icon" class="fa-solid fa-sun"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Modal Reset Password -->
+            <div id="modal-reset-password" class="modal-overlay">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title">Resetar Senha de Acesso</h2>
+                        <button class="modal-close" onclick="closeResetPasswordModal()"><i
+                                class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <form id="form-reset-password" onsubmit="submitResetPassword(event)">
+                        <input type="hidden" id="reset-user-id">
+                        <p class="text-[0.7rem] text-slate-500 mb-4 font-bold">Definindo nova senha para: <span
+                                id="reset-user-name" class="text-brand-500"></span></p>
+                        <div class="form-group">
+                            <label class="form-label">Nova Senha</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="reset-new-password" class="form-input"
+                                    placeholder="Mínimo 6 caracteres" required minlength="6">
+                                <button type="button" class="password-toggle-btn"
+                                    onclick="togglePasswordVisibility('reset-new-password', this.querySelector('i'))"
+                                    tabindex="-1"><i class="fa-solid fa-eye"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-4 mt-8">
+                            <button type="button" class="btn-secondary"
+                                onclick="closeResetPasswordModal()">Cancelar</button>
+                            <button type="submit" class="btn-primary" id="btn-submit-reset">Confirmar Reset</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Create User Modal -->
+            <div class="admin-content">
+
+                <!-- ==================== DASHBOARD VIEW ==================== -->
+                <div id="view-dashboard" class="admin-view active">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2.5rem">
+                        <h1 class="section-title" style="margin-bottom:0">Dashboard</h1>
+                        <button class="btn-secondary" onclick="loadDashboard()">
+                            <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+                        </button>
+                    </div>
+
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <i class="fa-solid fa-users kpi-bg-icon"></i>
+                            <p class="kpi-label">Usuários Ativos</p>
+                            <p id="kpi-users" class="kpi-value brand">--</p>
+                            <p class="kpi-sub">Total de contas cadastradas na plataforma.</p>
+                        </div>
+                        <div class="kpi-card">
+                            <i class="fa-solid fa-dollar-sign kpi-bg-icon"></i>
+                            <p class="kpi-label">Receita Mensal (MRR)</p>
+                            <p id="kpi-mrr" class="kpi-value">--</p>
+                            <span class="kpi-trend up"><i class="fa-solid fa-arrow-up"></i> +8.0%</span>
+                        </div>
+                        <div class="kpi-card">
+                            <i class="fa-solid fa-triangle-exclamation kpi-bg-icon"></i>
+                            <p class="kpi-label">Empresas Críticas</p>
+                            <p id="kpi-critical" class="kpi-value" style="color:#ef4444">--</p>
+                            <p class="kpi-sub">Score abaixo de 40. Candidatos a consultoria premium.</p>
+                        </div>
+                        <div class="kpi-card">
+                            <i class="fa-solid fa-brain kpi-bg-icon"></i>
+                            <p class="kpi-label">Diagnósticos (Mês)</p>
+                            <p id="kpi-diagnostics" class="kpi-value">--</p>
+                            <span class="kpi-trend up"><i class="fa-solid fa-arrow-up"></i> +12%</span>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="charts-grid">
+                        <div class="glass-card chart-card">
+                            <h3><i class="fa-solid fa-chart-line"></i> Evolução da Receita</h3>
+                            <div style="height:280px"><canvas id="chart-revenue"></canvas></div>
+                        </div>
+                        <div class="glass-card chart-card">
+                            <h3><i class="fa-solid fa-chart-pie"></i> Distribuição de Planos</h3>
+                            <div style="height:280px;display:flex;align-items:center;justify-content:center"><canvas
+                                    id="chart-plans"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Critical Alerts Table -->
+                    <div class="glass-card table-container">
+                        <div class="table-toolbar">
+                            <h3><i class="fa-solid fa-triangle-exclamation"
+                                    style="color:#ef4444;margin-right:0.5rem"></i> Alertas Críticos — Empresas que
+                                Precisam de Atenção</h3>
+                        </div>
+                        <div class="table-scroll-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Empresa</th>
+                                    <th>Score</th>
+                                    <th>Gargalo</th>
+                                    <th style="text-align:right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alerts-table-body"></tbody>
+                        </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== TICKETS VIEW ==================== -->
+                <div id="view-tickets" class="admin-view">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2.5rem">
+                        <h1 class="section-title" style="margin-bottom:0">Interações / Suporte</h1>
+                        <button class="btn-secondary" onclick="loadTickets()">
+                            <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+                        </button>
+                    </div>
+
+                    <div class="glass-card table-container">
+                        <div class="table-toolbar">
+                            <div class="table-filters">
+                                <div id="ticket-status-filters" style="display:flex;gap:0.4rem">
+                                    <button class="filter-btn active"
+                                        onclick="filterTickets('all', this)">Todos</button>
+                                    <button class="filter-btn" onclick="filterTickets('Aberto', this)">Abertos</button>
+                                    <button class="filter-btn"
+                                        onclick="filterTickets('Respondido', this)">Respondidos</button>
+                                </div>
+                            </div>
+                            <div class="table-search">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="search-ticket" class="search-input"
+                                    placeholder="Buscar ticket ou empresa..." oninput="searchTickets(this.value)">
+                            </div>
+                        </div>
+
+                        <div class="table-scroll-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Data</th>
+                                    <th>Empresa / Usuário</th>
+                                    <th>Assunto</th>
+                                    <th style="text-align:right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tickets-table-body">
+                                <tr>
+                                    <td colspan="5" style="text-align:center;padding:2rem;">Carregando tickets...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== USERS VIEW ==================== -->
+                <div id="view-users" class="admin-view">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2.5rem">
+                        <h1 class="section-title" style="margin-bottom:0">Gestão de Usuários</h1>
+                        <div style="display:flex; gap:1rem;">
+                            <button class="btn-secondary" onclick="loadUsers()">
+                                <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+                            </button>
+                            <button class="btn-primary" onclick="openCreateUserModal()">
+                                <i class="fa-solid fa-plus"></i> Novo Usuário
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card table-container">
+                        <div class="table-toolbar">
+                            <div class="table-filters">
+                                <div id="user-plan-filters" style="display:flex;gap:0.4rem">
+                                    <button class="filter-btn active"
+                                        onclick="filterUsers('plan','all',this)">Todos</button>
+                                    <button class="filter-btn"
+                                        onclick="filterUsers('plan','parceiro',this)">Parceiro</button>
+                                    <button class="filter-btn"
+                                        onclick="filterUsers('plan','essencial',this)">Essencial</button>
+                                    <button class="filter-btn"
+                                        onclick="filterUsers('plan','profissional',this)">Profissional</button>
+                                    <button class="filter-btn"
+                                        onclick="filterUsers('plan','enterprise',this)">Enterprise</button>
+                                </div>
+                                <div style="width:1px;height:24px;background:var(--border-color)"></div>
+                                <div id="user-status-filters" style="display:flex;gap:0.4rem">
+                                    <button class="filter-btn active"
+                                        onclick="filterUsers('status','all',this)">Todos</button>
+                                    <button class="filter-btn"
+                                        onclick="filterUsers('status','ativo',this)">Ativos</button>
+                                    <button class="filter-btn"
+                                        onclick="filterUsers('status','inativo',this)">Inativos</button>
+                                </div>
+                            </div>
+                            <input type="text" class="search-input" placeholder="Buscar nome, e-mail, empresa..."
+                                oninput="searchUsers(this.value)">
+                        </div>
+                        <div class="table-scroll-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>E-mail</th>
+                                    <th>Empresa</th>
+                                    <th>Plano</th>
+                                    <th>Status</th>
+                                    <th>Último Acesso</th>
+                                    <th style="text-align:center">Análises</th>
+                                    <th style="text-align:right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body"></tbody>
+                        </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== BILLING VIEW ==================== -->
+                <div id="view-billing" class="admin-view">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+                        <h1 class="section-title" style="margin-bottom:0">Controle de Custos & Billing</h1>
+                        <button class="btn-secondary" onclick="loadBilling()">
+                            <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+                        </button>
+                    </div>
+                    <p class="section-subtitle">Estimativa baseada em R$ 0,05 por diagnóstico processado pela IA.</p>
+
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <i class="fa-solid fa-wallet kpi-bg-icon"></i>
+                            <p class="kpi-label">Receita Total</p>
+                            <p id="billing-receita" class="kpi-value brand">--</p>
+                        </div>
+                        <div class="kpi-card">
+                            <i class="fa-solid fa-microchip kpi-bg-icon"></i>
+                            <p class="kpi-label">Custo Total IA</p>
+                            <p id="billing-custo" class="kpi-value" style="color:#ef4444">--</p>
+                        </div>
+                        <div class="kpi-card">
+                            <i class="fa-solid fa-arrow-trend-up kpi-bg-icon"></i>
+                            <p class="kpi-label">Margem</p>
+                            <p id="billing-margem" class="kpi-value" style="color:#10b981">--</p>
+                        </div>
+                        <div class="kpi-card">
+                            <i class="fa-solid fa-receipt kpi-bg-icon"></i>
+                            <p class="kpi-label">Ticket Médio</p>
+                            <p id="billing-ticket" class="kpi-value">--</p>
+                        </div>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="glass-card chart-card" style="margin-bottom:2.5rem">
+                        <h3><i class="fa-solid fa-chart-column"></i> Receita vs Custo por Cliente (Top 10)</h3>
+                        <div style="height:300px"><canvas id="chart-billing"></canvas></div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="glass-card table-container">
+                        <div class="table-toolbar">
+                            <h3><i class="fa-solid fa-table" style="color:var(--brand-500);margin-right:0.5rem"></i>
+                                Detalhamento por Cliente</h3>
+                        </div>
+                        <div class="table-scroll-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Empresa</th>
+                                    <th>Plano</th>
+                                    <th style="text-align:center">Diagnósticos</th>
+                                    <th>Custo IA</th>
+                                    <th>Receita</th>
+                                    <th style="text-align:center">ROI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="billing-table-body"></tbody>
+                        </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== HEALTH MONITOR VIEW ==================== -->
+                <div id="view-health" class="admin-view">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+                        <h1 class="section-title" style="margin-bottom:0">Health Monitor</h1>
+                        <button class="btn-secondary" onclick="loadHealth()">
+                            <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+                        </button>
+                    </div>
+                    <p class="section-subtitle">Monitoramento de saúde organizacional dos clientes. Empresas com score
+                        abaixo de 40 são candidatas à consultoria premium ativa.</p>
+
+                    <div id="health-filters" style="display:flex;gap:0.5rem;margin-bottom:2rem">
+                        <button class="filter-btn active" onclick="filterHealth('all', this)">Todas</button>
+                        <button class="filter-btn" onclick="filterHealth('critical', this)">🔴 Críticas
+                            (&lt;40)</button>
+                        <button class="filter-btn" onclick="filterHealth('warning', this)">🟡 Atenção (40-60)</button>
+                        <button class="filter-btn" onclick="filterHealth('healthy', this)">🟢 Saudáveis
+                            (&gt;60)</button>
+                    </div>
+
+                    <div id="health-cards-container" class="health-grid"></div>
+                </div>
+
+                <!-- ==================== CONSULTANTS VIEW ==================== -->
+                <div id="view-consultants" class="admin-view">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2.5rem">
+                        <h1 class="section-title" style="margin-bottom:0">Gestão de Consultores</h1>
+                        <div style="display:flex; gap:1rem;">
+                            <button class="btn-secondary" onclick="loadConsultants()">
+                                <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+                            </button>
+                            <button class="btn-primary" onclick="openCreateConsultantModal()">
+                                <i class="fa-solid fa-plus"></i> Novo Consultor
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="consultants-container" class="consultant-grid"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Modal: Create User -->
+    <div id="modal-create-user" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-create-user')">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fa-solid fa-user-plus"
+                        style="color:var(--brand-500);margin-right:0.5rem"></i> Novo Usuário</h2>
+                <button class="modal-close" onclick="closeModal('modal-create-user')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="create-user-form" onsubmit="submitCreateUser(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome Completo</label>
+                    <input type="text" id="new-user-name" class="form-input" placeholder="Nome do usuário" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">E-mail</label>
+                    <input type="email" id="new-user-email" class="form-input" placeholder="email@empresa.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Senha Inicial</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="new-user-password" class="form-input"
+                            placeholder="Mínimo 6 caracteres" required minlength="6">
+                        <button type="button" class="password-toggle-btn"
+                            onclick="togglePasswordVisibility('new-user-password', this.querySelector('i'))"
+                            tabindex="-1"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                    <div class="form-group">
+                        <label class="form-label">Empresa</label>
+                        <input type="text" id="new-user-company" class="form-input" placeholder="Razão Social" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Segmento</label>
+                        <select id="new-user-segment" class="form-input">
+                            <option value="Tecnologia">Tecnologia e SaaS</option>
+                            <option value="Servicos">Serviços Corporativos</option>
+                            <option value="Industria">Indústria e Logística</option>
+                            <option value="Varejo">Varejo e E-commerce</option>
+                            <option value="Outros">Outros Setores</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                    <div class="form-group">
+                        <label class="form-label">Plano</label>
+                        <select id="new-user-plan" class="form-input" onchange="toggleAdminModuloOptions('new')">
+                            <option value="parceiro">Parceiro (R$ 0)</option>
+                            <option value="essencial">Essencial (R$ 197)</option>
+                            <option value="profissional">Profissional (R$ 397)</option>
+                            <option value="enterprise">Enterprise / Premium (Valor a definir)</option>
+                        </select>
+                    </div>
+
+                    <div id="new-user-modulo-container" class="form-group hidden"
+                        style="grid-column: 1 / -1; margin-top: 0.5rem;">
+                        <label class="form-label" style="color:var(--brand-500);"><i
+                                class="fa-solid fa-puzzle-piece"></i> Seleção de Módulo (Plano Essencial)</label>
+                        <div style="display:flex; gap:1.5rem; margin-bottom: 0.75rem;">
+                            <label
+                                style="font-size:0.8rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input
+                                    type="radio" name="new_modulo_mode" value="admin" checked
+                                    onclick="toggleAdminModuloSelect('new')"> Administrador Escolhe</label>
+                            <label
+                                style="font-size:0.8rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input
+                                    type="radio" name="new_modulo_mode" value="client"
+                                    onclick="toggleAdminModuloSelect('new')"> Cliente Escolhe no 1º Acesso</label>
+                        </div>
+                        <select id="new-user-modulo-select" class="form-input">
+                            <option value="estrategico">Estratégico</option>
+                            <option value="financeiro">Financeiro</option>
+                            <option value="comercial">Comercial</option>
+                            <option value="marketing">Marketing</option>
+                            <option value="pessoas">Pessoas</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nível de Acesso</label>
+                        <select id="new-user-role" class="form-input">
+                            <option value="user">Usuário Padrão</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem">
+                    <i class="fa-solid fa-check"></i> Criar Usuário
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit User -->
+    <div id="modal-edit-user" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-edit-user')">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fa-solid fa-pen-to-square"
+                        style="color:var(--brand-500);margin-right:0.5rem"></i> Editar Usuário</h2>
+                <button class="modal-close" onclick="closeModal('modal-edit-user')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="submitEditUser(event)">
+                <input type="hidden" id="edit-user-id">
+                <div class="form-group">
+                    <label class="form-label">Nome</label>
+                    <input type="text" id="edit-user-name" class="form-input" required>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                    <div class="form-group">
+                        <label class="form-label">Empresa</label>
+                        <input type="text" id="edit-user-company" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Segmento</label>
+                        <select id="edit-user-segment" class="form-input">
+                            <option value="Tecnologia">Tecnologia e SaaS</option>
+                            <option value="Servicos">Serviços Corporativos</option>
+                            <option value="Industria">Indústria e Logística</option>
+                            <option value="Varejo">Varejo e E-commerce</option>
+                            <option value="Outros">Outros Setores</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                    <div class="form-group">
+                        <label class="form-label">Plano</label>
+                        <select id="edit-user-plan" class="form-input" onchange="toggleAdminModuloOptions('edit')">
+                            <option value="parceiro">Parceiro (R$ 0)</option>
+                            <option value="essencial">Essencial (R$ 197)</option>
+                            <option value="profissional">Profissional (R$ 397)</option>
+                            <option value="enterprise">Enterprise / Premium (Valor a definir)</option>
+                        </select>
+                    </div>
+
+                    <div id="edit-user-modulo-container" class="form-group hidden"
+                        style="grid-column: 1 / -1; margin-top: 0.5rem;">
+                        <label class="form-label" style="color:var(--brand-500);"><i
+                                class="fa-solid fa-puzzle-piece"></i> Seleção de Módulo (Plano Essencial)</label>
+                        <div style="display:flex; gap:1.5rem; margin-bottom: 0.75rem;">
+                            <label
+                                style="font-size:0.8rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input
+                                    type="radio" name="edit_modulo_mode" value="admin" checked
+                                    onclick="toggleAdminModuloSelect('edit')"> Administrador Escolhe</label>
+                            <label
+                                style="font-size:0.8rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;"><input
+                                    type="radio" name="edit_modulo_mode" value="client"
+                                    onclick="toggleAdminModuloSelect('edit')"> Cliente Escolhe no 1º Acesso</label>
+                        </div>
+                        <select id="edit-user-modulo-select" class="form-input">
+                            <option value="estrategico">Estratégico</option>
+                            <option value="financeiro">Financeiro</option>
+                            <option value="comercial">Comercial</option>
+                            <option value="marketing">Marketing</option>
+                            <option value="pessoas">Pessoas</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nível de Acesso</label>
+                        <select id="edit-user-role" class="form-input">
+                            <option value="user">Usuário Padrão</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select id="edit-user-status" class="form-input">
+                            <option value="ativo">Ativo</option>
+                            <option value="inativo">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem">
+                    <i class="fa-solid fa-check"></i> Salvar Alterações
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Send Premium Offer -->
+    <div id="modal-offer" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-offer')">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fa-solid fa-paper-plane"
+                        style="color:var(--brand-500);margin-right:0.5rem"></i> Enviar Oferta Premium</h2>
+                <button class="modal-close" onclick="closeModal('modal-offer')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="hidden" id="offer-user-id">
+
+            <div
+                style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding:1rem;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:var(--radius-md)">
+                <div style="font-size:2rem;font-weight:900;color:#ef4444" id="offer-score-value">--</div>
+                <div>
+                    <p style="font-weight:800;font-size:0.9rem" id="offer-empresa-name">---</p>
+                    <p
+                        style="font-size:0.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.1em">
+                        Score em estado crítico</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Preview da Mensagem</label>
+                <div id="offer-preview" class="offer-preview"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Mensagem Personalizada (Opcional)</label>
+                <textarea id="offer-message" class="form-input" rows="3"
+                    placeholder="Adicione uma mensagem personalizada ou deixe em branco para usar o template..."
+                    style="resize:none"></textarea>
+            </div>
+
+            <button onclick="submitOffer()" class="btn-primary" style="width:100%;justify-content:center">
+                <i class="fa-solid fa-paper-plane"></i> Confirmar Envio da Oferta
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Create Consultant -->
+    <div id="modal-create-consultant" class="modal-overlay"
+        onclick="if(event.target===this)closeModal('modal-create-consultant')">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fa-solid fa-user-tie"
+                        style="color:var(--brand-500);margin-right:0.5rem"></i> Novo Consultor</h2>
+                <button class="modal-close" onclick="closeModal('modal-create-consultant')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="create-consultant-form" onsubmit="submitCreateConsultant(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome Completo</label>
+                    <input type="text" id="new-consultant-name" class="form-input" placeholder="Dr. Nome Sobrenome"
+                        required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">E-mail</label>
+                    <input type="email" id="new-consultant-email" class="form-input" placeholder="consultor@giif.com"
+                        required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Senha Inicial</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="new-consultant-password" class="form-input"
+                            placeholder="Mínimo 6 caracteres" required minlength="6">
+                        <button type="button" class="password-toggle-btn"
+                            onclick="togglePasswordVisibility('new-consultant-password', this.querySelector('i'))"
+                            tabindex="-1"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Especialidade</label>
+                    <select id="new-consultant-specialty" class="form-input">
+                        <option value="Estratégia & Governança">Estratégia & Governança</option>
+                        <option value="Finanças Corporativas">Finanças Corporativas</option>
+                        <option value="Operações & Processos">Operações & Processos</option>
+                        <option value="Marketing & Growth">Marketing & Growth</option>
+                        <option value="Gestão de Pessoas">Gestão de Pessoas</option>
+                        <option value="Comercial & Vendas">Comercial & Vendas</option>
+                    </select>
+                </div>
+
+                <div class="form-group"
+                    style="padding: 1.5rem; background: var(--bg-surface-alt); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                        <div>
+                            <label class="form-label"
+                                style="margin-bottom:0; color: var(--text-primary); font-size: 0.75rem;">Acesso Total
+                                (Parceiro)</label>
+                            <p style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">Ative para que
+                                este consultor ignore as restrições de plano dos clientes vinculados.</p>
+                        </div>
+                        <label class="switch-toggle" tabindex="0" onkeydown="if(event.key==='Enter')this.click()">
+                            <input type="checkbox" id="new-consultant-partner">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Vínculo de Empresas</label>
+                    <div class="checkbox-list" id="new-consultant-companies">
+                        <!-- Carregado via JS -->
+                        <div style="text-align:center; padding: 1rem; color: var(--text-muted); font-size: 0.75rem;">
+                            Carregando empresas...</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="btn-submit-consultant"
+                    style="width:100%;justify-content:center;margin-top:0.5rem">
+                    <i class="fa-solid fa-check"></i> Cadastrar Consultor
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Consultant Links -->
+    <div id="modal-edit-consultant-links" class="modal-overlay"
+        onclick="if(event.target===this)closeModal('modal-edit-consultant-links')">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fa-solid fa-link"
+                        style="color:var(--brand-500);margin-right:0.5rem"></i> Editar Vínculos</h2>
+                <button class="modal-close" onclick="closeModal('modal-edit-consultant-links')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="edit-consultant-links-form" onsubmit="submitEditConsultantLinks(event)">
+                <input type="hidden" id="edit-consultant-id">
+                <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:1.5rem;font-weight:700">
+                    Gerenciando vínculos de: <span id="edit-consultant-link-name" style="color:var(--brand-500)"></span>
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Empresas Vinculadas</label>
+                    <div class="checkbox-list" id="edit-consultant-companies" style="max-height:280px">
+                        <div style="text-align:center; padding: 1rem; color: var(--text-muted); font-size: 0.75rem;">
+                            Carregando empresas...</div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" id="btn-submit-edit-links"
+                    style="width:100%;justify-content:center;margin-top:0.5rem">
+                    <i class="fa-solid fa-check"></i> Salvar Vínculos
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Responder Ticket -->
+    <div id="modal-ticket-admin" class="modal-overlay"
+        onclick="if(event.target===this)closeModal('modal-ticket-admin')">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fa-solid fa-reply"
+                        style="color:var(--brand-500);margin-right:0.5rem"></i> Responder Chamado</h2>
+                <button class="modal-close" onclick="closeModal('modal-ticket-admin')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="hidden" id="ticket-id">
+
+            <div
+                style="background:var(--bg-surface-alt); padding:1.5rem; border-radius:var(--radius-md); border:1px solid var(--border-color); margin-bottom:1.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
+                    <h3 id="ticket-admin-assunto" style="font-weight:900; margin:0;">Carregando...</h3>
+                    <span id="ticket-admin-status" class="plan-badge bg-emerald"
+                        style="font-size:0.7rem; padding:0.2rem 0.6rem;">Aberto</span>
+                </div>
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem; font-weight:700;">
+                    <i class="fa-solid fa-user" style="width:16px;"></i> <span id="ticket-admin-empresa"></span><br>
+                    <i class="fa-solid fa-tag" style="width:16px;"></i> <span id="ticket-admin-categoria"></span>
+                </p>
+                <div
+                    style="background:var(--bg-main); padding:1rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:0.9rem; line-height:1.5;">
+                    <strong
+                        style="font-size:0.7rem; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:0.5rem; letter-spacing:1px;">Mensagem
+                        do Cliente:</strong>
+                    <span id="ticket-admin-mensagem"></span>
+                </div>
+            </div>
+
+            <form id="form-responder-ticket" onsubmit="submitTicketResponse(event)">
+                <div class="form-group">
+                    <label class="form-label">Sua Resposta (Visível para o cliente)</label>
+                    <textarea id="ticket-admin-resposta" class="form-input" rows="4"
+                        placeholder="Digite sua resposta de suporte..." required></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom:2rem;">
+                    <label class="form-label">Ação no Ticket</label>
+                    <select id="ticket-admin-action" class="form-input">
+                        <option value="Respondido">Responder e Manter Aberto (Aguardando Cliente)</option>
+                        <option value="Fechado">Responder e Fechar Chamado</option>
+                    </select>
+                </div>
+
+                <div style="display:flex; gap:1rem; justify-content:flex-end;">
+                    <button type="button" class="btn-secondary"
+                        onclick="closeModal('modal-ticket-admin')">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="btn-submit-ticket-response">
+                        <i class="fa-solid fa-paper-plane"></i> Enviar Resposta
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Password Toggle Utility -->
+    <script>
+        function togglePasswordVisibility(inputId, iconEl) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                iconEl.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                iconEl.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+    </script>
+
+    <!-- Admin JS -->
+    <script src="js/admin.js"></script>
+</body>
+
+</html>
