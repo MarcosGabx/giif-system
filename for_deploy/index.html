@@ -889,6 +889,67 @@
             pointer-events: none;
         }
 
+        /* ── Task Detail Panel ── */
+        #tm-detail-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: rgba(0,0,0,0.42);
+        }
+        #tm-detail-panel {
+            position: absolute;
+            right: 0; top: 0; bottom: 0;
+            width: 420px;
+            max-width: 100vw;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -6px 0 32px rgba(0,0,0,0.22);
+            transform: translateX(100%);
+            transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        #tm-detail-overlay.tdp-open #tm-detail-panel { transform: translateX(0); }
+        .tdp-light { background: #fff; color: #0f172a; }
+        .tdp-dark  { background: #1e293b; color: #f1f5f9; }
+        .tdp-label { font-size: 12px; font-weight: 600; color: #64748b; min-width: 110px; }
+        .tdp-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 800;
+            background: #3B55E6; color: #fff; flex-shrink: 0;
+        }
+        .tdp-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
+            background: rgba(59,85,230,0.1); color: #3B55E6;
+        }
+        .tdp-tag button { background: none; border: none; color: #3B55E6; cursor: pointer; padding: 0 2px; font-size: 13px; line-height: 1; }
+        .tdp-check-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(100,116,139,0.1); }
+        .tdp-check-row:last-child { border-bottom: none; }
+        .tdp-empty { font-size: 12px; color: #94a3b8; padding: 8px 0; text-align: center; }
+        .tdp-section { margin-bottom: 18px; }
+        .tdp-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .tdp-btn-ghost { background: none; border: none; cursor: pointer; color: #64748b; font-size: 11px; padding: 2px 6px; }
+        .tdp-btn-circle {
+            width: 22px; height: 22px; border-radius: 50%; border: none;
+            background: #3B55E6; color: #fff; cursor: pointer; font-size: 11px;
+            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .tdp-inp {
+            width: 100%; padding: 7px 10px; border-radius: 8px;
+            border: 1.5px solid rgba(100,116,139,0.2);
+            background: transparent; color: inherit; font-size: 13px; outline: none;
+            font-family: inherit;
+        }
+        .tdp-inp:focus { border-color: #3B55E6; }
+        .tdp-pill-inp {
+            padding: 4px 10px; border-radius: 20px;
+            border: 1.5px solid rgba(100,116,139,0.2);
+            background: transparent; color: inherit; font-size: 12px; outline: none;
+            cursor: pointer;
+        }
+        .tdp-pill-inp:focus { border-color: #3B55E6; }
+
         .node-color-dot { /* keep for backwards compat with postProcess */
             width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
         }
@@ -2294,6 +2355,7 @@
         let mapaAtualNome = '';
         let _autoSaveTimer = null;
         let _responsaveisDisponiveis = [];
+        let _tmDetIdx = null;
 
         // ── Variáveis de sessão em memória (não expor no localStorage) ──
         let _sessaoRole = 'user';
@@ -4789,6 +4851,10 @@
                             </div>
                         </div>
                         <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">
+                            <button onclick="_tmDetOpen(${ti})" title="Editar detalhes"
+                                style="background:none;border:none;color:#3B55E6;cursor:pointer;padding:3px 5px;border-radius:5px;font-size:11px">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
                             <button onclick="taskToggleSubList(${ti})" title="Subtarefas"
                                 style="background:none;border:none;color:#6366f1;cursor:pointer;padding:3px 5px;border-radius:5px;font-size:11px">
                                 <i class="fa-solid fa-chevron-${t._expanded ? 'up' : 'down'}"></i>
@@ -4817,6 +4883,318 @@
             body.innerHTML = _renderTasksHTML(_tmTasks);
             _setNodeTasks(_tmNodeId, _tmTasks);
             _renderNodeTaskBadge(_tmNodeId);
+        }
+
+        // ── Task Detail Panel ──────────────────────────────────────────
+
+        function _tmDetOpen(ti) {
+            const t = _tmTasks[ti];
+            if (!t) return;
+            _tmDetIdx = ti;
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const panel  = document.getElementById('tm-detail-panel');
+            panel.className = isDark ? 'tdp-dark' : 'tdp-light';
+
+            const prazoVal  = t.prazo  || '';
+            const inicioVal = t.inicio || '';
+
+            // Responsible avatar + select options
+            const respName = t.responsavel_nome || '';
+            const initials = respName ? respName.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase() : '';
+            const avatarHTML = initials
+                ? `<span class="tdp-avatar" id="tm-det-resp-avatar" title="${DOMPurify.sanitize(respName)}">${initials}</span>`
+                : `<span class="tdp-avatar" id="tm-det-resp-avatar" style="display:none"></span>`;
+
+            document.getElementById('tm-det-body').innerHTML = `
+                <!-- Título -->
+                <input id="tm-det-titulo" type="text"
+                    value="${DOMPurify.sanitize(t.texto)}" placeholder="Título da tarefa"
+                    style="width:100%;font-size:16px;font-weight:700;border:none;border-bottom:2px solid #3B55E6;padding:4px 0 10px;margin-bottom:20px;background:transparent;color:inherit;outline:none;font-family:inherit"
+                    onmousedown="event.stopPropagation()">
+
+                <!-- Responsáveis -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                    <span class="tdp-label">Responsáveis:</span>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        ${avatarHTML}
+                        <select id="tm-det-resp" onchange="_tmDetChangeResp(this.value)"
+                            class="tdp-pill-inp" onmousedown="event.stopPropagation()">
+                            <option value="">— Nenhum —</option>
+                            ${_buildResponsavelOptions(t.responsavel_consultor_id, t.responsavel_nome)}
+                        </select>
+                    </div>
+                </div>
+                ${t._showOutroInput ? `
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                    <span class="tdp-label">Nome:</span>
+                    <input id="tm-det-resp-manual" type="text"
+                        value="${DOMPurify.sanitize(t.responsavel_nome||'')}" placeholder="Nome do responsável..."
+                        class="tdp-inp" style="flex:1" onmousedown="event.stopPropagation()"
+                        oninput="_tmDetEditRespManual(this.value)">
+                </div>` : ''}
+
+                <!-- Vencimento -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                    <span class="tdp-label">Vencimento:</span>
+                    <input type="date" id="tm-det-prazo" value="${prazoVal}"
+                        class="tdp-pill-inp" onmousedown="event.stopPropagation()">
+                </div>
+
+                <!-- Agendamento -->
+                <div class="tdp-section">
+                    <div class="tdp-label" style="margin-bottom:10px">Agendamento:</div>
+                    <div style="display:flex;gap:16px;padding-left:8px;flex-wrap:wrap">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="font-size:12px;color:#64748b">Início:</span>
+                            <input type="date" id="tm-det-inicio" value="${inicioVal}"
+                                class="tdp-pill-inp" onmousedown="event.stopPropagation()">
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="font-size:12px;color:#64748b">Ação:</span>
+                            <input type="text" id="tm-det-acao"
+                                value="${DOMPurify.sanitize(t.acao||'')}" placeholder="Nenhuma ação"
+                                class="tdp-pill-inp" style="min-width:110px" onmousedown="event.stopPropagation()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progresso -->
+                <div class="tdp-section">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                        <span class="tdp-label" style="min-width:auto">Progresso:</span>
+                        <span id="tm-det-prog-lbl" style="font-size:13px;font-weight:700;color:#3B55E6">${t.progresso||0}%</span>
+                    </div>
+                    <input type="range" id="tm-det-progresso" min="0" max="100" value="${t.progresso||0}"
+                        oninput="document.getElementById('tm-det-prog-lbl').textContent=this.value+'%'"
+                        style="width:100%;accent-color:#3B55E6;cursor:pointer" onmousedown="event.stopPropagation()">
+                </div>
+
+                <hr style="border:none;border-top:1px solid rgba(100,116,139,0.15);margin:4px 0 18px">
+
+                <!-- Descrição -->
+                <div class="tdp-section">
+                    <div class="tdp-label" style="display:block;margin-bottom:8px">Descrição</div>
+                    <textarea id="tm-det-descricao" placeholder="Descrição da tarefa (clique para escrever)"
+                        class="tdp-inp" style="min-height:72px;resize:vertical"
+                        onmousedown="event.stopPropagation()">${DOMPurify.sanitize(t.descricao||'')}</textarea>
+                </div>
+
+                <!-- Checklist -->
+                <div class="tdp-section">
+                    <div class="tdp-section-head">
+                        <span class="tdp-label" style="min-width:auto">Checklist</span>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <button class="tdp-btn-ghost" onclick="_tmDetClearChecklist()">Limpar lista</button>
+                            <button class="tdp-btn-circle" onclick="_tmDetAddCheck()" title="Adicionar item">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="tm-det-checklist"></div>
+                </div>
+
+                <!-- Etiquetas -->
+                <div class="tdp-section">
+                    <div class="tdp-label" style="display:block;margin-bottom:8px">Etiquetas</div>
+                    <div id="tm-det-tags" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px"></div>
+                    <input id="tm-det-tag-inp" placeholder="+ Adicionar etiqueta e pressionar Enter"
+                        class="tdp-inp" style="font-size:12px"
+                        onkeydown="_tmDetAddTag(event)" onmousedown="event.stopPropagation()">
+                </div>
+            `;
+
+            _tmDetRenderChecklist();
+            _tmDetRenderTags();
+
+            const overlay = document.getElementById('tm-detail-overlay');
+            overlay.style.display = 'block';
+            requestAnimationFrame(() => overlay.classList.add('tdp-open'));
+
+            setTimeout(() => {
+                const el = document.getElementById('tm-det-titulo');
+                if (el) { el.focus(); el.select(); }
+            }, 240);
+        }
+
+        function _tmDetClose() {
+            if (_tmDetIdx === null) return;
+            const t = _tmTasks[_tmDetIdx];
+            if (t) {
+                const get = id => document.getElementById(id);
+                const titulo    = get('tm-det-titulo');
+                const prazo     = get('tm-det-prazo');
+                const inicio    = get('tm-det-inicio');
+                const acao      = get('tm-det-acao');
+                const progresso = get('tm-det-progresso');
+                const descricao = get('tm-det-descricao');
+                if (titulo)    t.texto     = titulo.value.trim() || 'Nova tarefa';
+                if (prazo)     t.prazo     = prazo.value || null;
+                if (inicio)    t.inicio    = inicio.value || null;
+                if (acao)      t.acao      = acao.value.trim();
+                if (progresso) t.progresso = parseInt(progresso.value, 10);
+                if (descricao) t.descricao = descricao.value.trim();
+            }
+            _tmDetIdx = null;
+
+            const overlay = document.getElementById('tm-detail-overlay');
+            overlay.classList.remove('tdp-open');
+            setTimeout(() => { overlay.style.display = 'none'; }, 240);
+            _refreshTaskModal();
+        }
+
+        function _tmDetChangeResp(val) {
+            if (_tmDetIdx === null) return;
+            const t = _tmTasks[_tmDetIdx];
+            if (!val) {
+                t.responsavel_consultor_id = null;
+                t.responsavel_nome = null;
+                t._showOutroInput = false;
+            } else if (val === 'outro') {
+                t.responsavel_consultor_id = null;
+                t._showOutroInput = true;
+            } else {
+                const found = _responsaveisDisponiveis.find(r => r.id === val);
+                t.responsavel_consultor_id = val;
+                t.responsavel_nome = found ? found.nome_completo : val;
+                t._showOutroInput = false;
+            }
+            // Update avatar
+            const av = document.getElementById('tm-det-resp-avatar');
+            if (av) {
+                const name = t.responsavel_nome || '';
+                const ini  = name ? name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase() : '';
+                av.textContent = ini;
+                av.title       = DOMPurify.sanitize(name);
+                av.style.display = ini ? 'inline-flex' : 'none';
+            }
+            // Show/hide manual name input
+            const manualRow = document.getElementById('tm-det-resp-manual');
+            if (t._showOutroInput && !manualRow) {
+                const selEl = document.getElementById('tm-det-resp');
+                if (selEl && selEl.parentElement) {
+                    const inp = document.createElement('input');
+                    inp.id = 'tm-det-resp-manual';
+                    inp.type = 'text';
+                    inp.placeholder = 'Nome do responsável...';
+                    inp.className = 'tdp-inp';
+                    inp.style.cssText = 'flex:1;margin-top:8px';
+                    inp.setAttribute('onmousedown', 'event.stopPropagation()');
+                    inp.setAttribute('oninput', '_tmDetEditRespManual(this.value)');
+                    selEl.parentElement.parentElement.insertAdjacentElement('afterend',
+                        Object.assign(document.createElement('div'), {
+                            innerHTML: `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><span class="tdp-label">Nome:</span>${inp.outerHTML}</div>`
+                        })
+                    );
+                }
+            } else if (!t._showOutroInput && manualRow) {
+                const parentDiv = manualRow.closest('div[style]');
+                if (parentDiv) parentDiv.remove();
+            }
+        }
+
+        function _tmDetEditRespManual(val) {
+            if (_tmDetIdx === null) return;
+            _tmTasks[_tmDetIdx].responsavel_nome = val.trim();
+        }
+
+        function _tmDetRenderChecklist() {
+            const container = document.getElementById('tm-det-checklist');
+            if (!container || _tmDetIdx === null) return;
+            const t     = _tmTasks[_tmDetIdx];
+            const items = t.subtarefas || [];
+            const isDark = document.documentElement.classList.contains('dark');
+            const clr    = isDark ? '#e2e8f0' : '#1e293b';
+
+            if (!items.length) {
+                container.innerHTML = `<div class="tdp-empty">Nenhum item para exibir</div>`;
+                return;
+            }
+            container.innerHTML = items.map((s, ci) => `
+                <div class="tdp-check-row">
+                    <input type="checkbox" ${s.concluida ? 'checked' : ''}
+                        onchange="_tmDetToggleCheck(${ci},this.checked)"
+                        style="width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:#3B55E6">
+                    <input type="text" value="${DOMPurify.sanitize(s.texto)}" placeholder="Item do checklist..."
+                        onblur="_tmDetEditCheck(${ci},this.value)"
+                        style="flex:1;border:none;background:transparent;font-size:12px;outline:none;color:${s.concluida ? '#94a3b8' : clr};${s.concluida ? 'text-decoration:line-through' : ''}"
+                        onmousedown="event.stopPropagation()">
+                    <button onclick="_tmDetDeleteCheck(${ci})"
+                        style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px 4px;font-size:11px;flex-shrink:0">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>`).join('');
+        }
+
+        function _tmDetToggleCheck(ci, val) {
+            if (_tmDetIdx === null || !_tmTasks[_tmDetIdx]) return;
+            _tmTasks[_tmDetIdx].subtarefas[ci].concluida = val;
+            _tmDetRenderChecklist();
+        }
+
+        function _tmDetEditCheck(ci, val) {
+            if (_tmDetIdx === null || !_tmTasks[_tmDetIdx]) return;
+            _tmTasks[_tmDetIdx].subtarefas[ci].texto = val.trim() || 'Item';
+        }
+
+        function _tmDetDeleteCheck(ci) {
+            if (_tmDetIdx === null || !_tmTasks[_tmDetIdx]) return;
+            _tmTasks[_tmDetIdx].subtarefas.splice(ci, 1);
+            _tmDetRenderChecklist();
+        }
+
+        function _tmDetAddCheck() {
+            if (_tmDetIdx === null || !_tmTasks[_tmDetIdx]) return;
+            if (!_tmTasks[_tmDetIdx].subtarefas) _tmTasks[_tmDetIdx].subtarefas = [];
+            _tmTasks[_tmDetIdx].subtarefas.push({
+                id: 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+                texto: 'Novo item',
+                concluida: false
+            });
+            _tmDetRenderChecklist();
+            setTimeout(() => {
+                const rows = document.querySelectorAll('#tm-det-checklist .tdp-check-row input[type=text]');
+                if (rows.length) { rows[rows.length-1].focus(); rows[rows.length-1].select(); }
+            }, 40);
+        }
+
+        function _tmDetClearChecklist() {
+            if (_tmDetIdx === null || !_tmTasks[_tmDetIdx]) return;
+            _tmTasks[_tmDetIdx].subtarefas = [];
+            _tmDetRenderChecklist();
+        }
+
+        function _tmDetRenderTags() {
+            const container = document.getElementById('tm-det-tags');
+            if (!container || _tmDetIdx === null) return;
+            const tags = _tmTasks[_tmDetIdx].etiquetas || [];
+            container.innerHTML = tags.length
+                ? tags.map((tag, i) => `
+                    <span class="tdp-tag">
+                        ${DOMPurify.sanitize(tag)}
+                        <button onclick="_tmDetRemoveTag(${i})" title="Remover">&times;</button>
+                    </span>`).join('')
+                : `<span style="font-size:12px;color:#94a3b8">Nenhuma etiqueta</span>`;
+        }
+
+        function _tmDetAddTag(event) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const inp = document.getElementById('tm-det-tag-inp');
+            const val = inp.value.trim();
+            if (!val || _tmDetIdx === null) return;
+            if (!_tmTasks[_tmDetIdx].etiquetas) _tmTasks[_tmDetIdx].etiquetas = [];
+            if (!_tmTasks[_tmDetIdx].etiquetas.includes(val)) {
+                _tmTasks[_tmDetIdx].etiquetas.push(val);
+            }
+            inp.value = '';
+            _tmDetRenderTags();
+        }
+
+        function _tmDetRemoveTag(i) {
+            if (_tmDetIdx === null || !_tmTasks[_tmDetIdx]) return;
+            _tmTasks[_tmDetIdx].etiquetas.splice(i, 1);
+            _tmDetRenderTags();
         }
 
         function taskToggle(ti, checked) {
@@ -4927,10 +5305,15 @@
                 responsavel_nome: null,
                 responsavel_consultor_id: null,
                 subtarefas: [],
+                descricao: '',
+                progresso: 0,
+                inicio: null,
+                acao: '',
+                etiquetas: [],
                 _expanded: false,
                 _showOutroInput: false
             });
-            _refreshTaskModal();
+            _tmDetOpen(_tmTasks.length - 1);
         }
 
         async function abrirModalTarefas(nodeId) {
@@ -4938,10 +5321,11 @@
             _tmNodeId = nodeId;
             const raw = _getNodeTasks(nodeId);
             _tmTasks = raw.map(t => ({
+                descricao: '', progresso: 0, inicio: null, acao: '', etiquetas: [],
                 ...t,
                 subtarefas: (t.subtarefas || []).map(s => ({...s})),
                 _expanded: false,
-                _showOutroInput: false
+                _showOutroInput: !!(t.responsavel_nome && !t.responsavel_consultor_id)
             }));
 
             const isDark = document.documentElement.classList.contains('dark');
@@ -5787,6 +6171,30 @@
             </div>
         </div>
     </div>
+    <!-- Task Detail Panel -->
+    <div id="tm-detail-overlay" onclick="if(event.target===this)_tmDetClose()">
+        <div id="tm-detail-panel">
+            <!-- Header -->
+            <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid rgba(100,116,139,0.15);flex-shrink:0">
+                <button onclick="_tmDetClose()" title="Voltar"
+                    style="background:none;border:none;cursor:pointer;color:#64748b;font-size:16px;padding:4px 8px;border-radius:6px;line-height:1">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div style="flex:1"></div>
+                <button onclick="_tmDetClose()"
+                    style="background:#3B55E6;border:none;cursor:pointer;color:#fff;font-size:12px;font-weight:700;padding:6px 20px;border-radius:8px;letter-spacing:0.04em">
+                    Salvar
+                </button>
+                <button onclick="_tmDetClose()" title="Fechar"
+                    style="background:none;border:none;cursor:pointer;color:#64748b;font-size:16px;padding:4px 8px;border-radius:6px;line-height:1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <!-- Body -->
+            <div id="tm-det-body" style="flex:1;overflow-y:auto;padding:20px 20px 40px"></div>
+        </div>
+    </div>
+
 </body>
 
 </html>
