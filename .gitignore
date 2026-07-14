@@ -1,9 +1,6 @@
 # Claude Code settings (local only)
 .claude/
 
-# Pasta de deploy manual (substituída pelo GitHub + Netlify)
-for_deploy/
-
 # Backups e arquivos temporários
 *.zip
 *.bak
