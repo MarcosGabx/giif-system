@@ -1,6 +1,19 @@
 # Claude Code settings (local only)
 .claude/
 
+# Arquivos de trabalho do root (deploy é feito via for_deploy/)
+index.html
+admin.html
+_headers
+_redirects
+css/
+js/
+
+# Arquivos internos / scripts
+fix_workflow.py
+PROJECT_SCOPE.md
+docs/
+
 # Backups e arquivos temporários
 *.zip
 *.bak

@@ -1,2 +1,0 @@
-# Netlify Proxy — Esconde o domínio real do backend n8n (VULN #12)
-/api/*  https://giif-api.duckdns.org/webhook/:splat  200
