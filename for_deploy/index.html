@@ -517,6 +517,13 @@
             width: 100%;
             height: 100%;
             background: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            outline: none;
+            cursor: grab;
+        }
+        #drawflow.df-panning {
+            cursor: grabbing;
         }
 
         /* Drawflow Node Overrides */
@@ -5750,6 +5757,57 @@
                     window.addEventListener('mouseup', stopGrab);
                 }
             });
+
+            // ── Reliable canvas pan using Pointer Events (replaces Drawflow's unreliable mousedown pan) ──
+            (function() {
+                const df = document.getElementById('drawflow');
+                let panActive = false, startPX = 0, startPY = 0, startCX = 0, startCY = 0;
+
+                df.addEventListener('pointerdown', (e) => {
+                    if (e.button !== 0) return;
+                    // Skip if clicking on a node, button, input, output connector or connection
+                    if (e.target.closest('.drawflow-node') ||
+                        e.target.closest('button') ||
+                        e.target.closest('input') ||
+                        e.target.closest('textarea') ||
+                        e.target.closest('select') ||
+                        e.target.closest('a') ||
+                        e.target.closest('.output') ||
+                        e.target.closest('.input') ||
+                        e.target.tagName === 'path') return;
+
+                    panActive = true;
+                    startPX = e.clientX;
+                    startPY = e.clientY;
+                    startCX = mapaEditor.canvas_x || 0;
+                    startCY = mapaEditor.canvas_y || 0;
+                    df.classList.add('df-panning');
+                    df.setPointerCapture(e.pointerId);
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, { capture: true });
+
+                df.addEventListener('pointermove', (e) => {
+                    if (!panActive) return;
+                    const dx = e.clientX - startPX;
+                    const dy = e.clientY - startPY;
+                    mapaEditor.canvas_x = startCX + dx;
+                    mapaEditor.canvas_y = startCY + dy;
+                    if (mapaEditor.precanvas) {
+                        mapaEditor.precanvas.style.transform =
+                            `translate(${mapaEditor.canvas_x}px, ${mapaEditor.canvas_y}px) scale(${mapaEditor.zoom || 1})`;
+                    }
+                    e.preventDefault();
+                }, { passive: false });
+
+                const stopPan = () => {
+                    if (!panActive) return;
+                    panActive = false;
+                    df.classList.remove('df-panning');
+                };
+                df.addEventListener('pointerup', stopPan);
+                df.addEventListener('pointercancel', stopPan);
+            })();
 
             carregarMapas();
             carregarResponsaveisDisponiveis();
