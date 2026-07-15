@@ -103,6 +103,13 @@
                             <div class="nav-icon"><i class="fa-solid fa-user-tie"></i></div> Consultores
                         </button>
                     </div>
+
+                    <div class="nav-group">
+                        <p class="nav-group-label">Observabilidade</p>
+                        <button onclick="navToAdmin('logs')" id="nav-logs" class="nav-btn">
+                            <div class="nav-icon"><i class="fa-solid fa-scroll"></i></div> Logs de Atividade
+                        </button>
+                    </div>
                 </nav>
             </div>
 
@@ -344,7 +351,7 @@
                                     <th>Empresa</th>
                                     <th>Plano</th>
                                     <th>Status</th>
-                                    <th>Último Acesso</th>
+                                    <th>Data de Criação</th>
                                     <th style="text-align:center">Análises</th>
                                     <th style="text-align:right">Ações</th>
                                 </tr>
@@ -460,6 +467,70 @@
                     <div id="consultants-container" class="consultant-grid"></div>
                 </div>
 
+                <!-- ========== VIEW: LOGS DE ATIVIDADE ========== -->
+                <div id="view-logs" class="admin-view">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem">
+                        <h1 class="section-title" style="margin-bottom:0">Logs de Atividade</h1>
+                        <button class="btn-secondary" onclick="loadLogs()">
+                            <i class="fa-solid fa-arrows-rotate"></i> Atualizar
+                        </button>
+                    </div>
+
+                    <!-- Filtros -->
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:flex-end">
+                        <div class="form-group" style="margin-bottom:0;min-width:200px">
+                            <label class="form-label">Tipo de Evento</label>
+                            <select id="log-filter-tipo" class="form-input" onchange="loadLogs(1)">
+                                <option value="">Todos</option>
+                                <option value="login_usuario">Login (Usuário)</option>
+                                <option value="login_consultor">Login (Consultor)</option>
+                                <option value="login_admin">Login (Admin)</option>
+                                <option value="usuario_criado">Usuário Criado</option>
+                                <option value="usuario_editado">Usuário Editado</option>
+                                <option value="usuario_excluido">Usuário Excluído</option>
+                                <option value="senha_resetada">Senha Resetada</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0">
+                            <label class="form-label">De</label>
+                            <input type="date" id="log-filter-inicio" class="form-input" onchange="loadLogs(1)">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0">
+                            <label class="form-label">Até</label>
+                            <input type="date" id="log-filter-fim" class="form-input" onchange="loadLogs(1)">
+                        </div>
+                    </div>
+
+                    <!-- Tabela -->
+                    <div style="overflow-x:auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data / Hora</th>
+                                    <th>Ator</th>
+                                    <th>Evento</th>
+                                    <th>Alvo</th>
+                                    <th>Detalhes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body">
+                                <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Paginação -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem">
+                        <button class="btn-secondary" id="log-btn-prev" onclick="loadLogs(window._logsPage - 1)" disabled>
+                            <i class="fa-solid fa-chevron-left"></i> Anterior
+                        </button>
+                        <span id="log-page-info" style="font-size:0.8rem;color:var(--text-muted)">Página 1</span>
+                        <button class="btn-secondary" id="log-btn-next" onclick="loadLogs(window._logsPage + 1)" disabled>
+                            Próxima <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
@@ -478,7 +549,7 @@
             <form id="create-user-form" onsubmit="submitCreateUser(event)">
                 <div class="form-group">
                     <label class="form-label">Nome Completo</label>
-                    <input type="text" id="new-user-name" class="form-input" placeholder="Nome do usuário" required>
+                    <input type="text" id="new-user-name" class="form-input" placeholder="Nome do usuário" required autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label class="form-label">E-mail</label>
@@ -497,7 +568,7 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
                     <div class="form-group">
                         <label class="form-label">Empresa</label>
-                        <input type="text" id="new-user-company" class="form-input" placeholder="Razão Social" required>
+                        <input type="text" id="new-user-company" class="form-input" placeholder="Razão Social" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Segmento</label>
@@ -571,12 +642,12 @@
                 <input type="hidden" id="edit-user-id">
                 <div class="form-group">
                     <label class="form-label">Nome</label>
-                    <input type="text" id="edit-user-name" class="form-input" required>
+                    <input type="text" id="edit-user-name" class="form-input" required autocomplete="off">
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
                     <div class="form-group">
                         <label class="form-label">Empresa</label>
-                        <input type="text" id="edit-user-company" class="form-input" required>
+                        <input type="text" id="edit-user-company" class="form-input" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Segmento</label>

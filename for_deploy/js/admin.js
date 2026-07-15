@@ -233,9 +233,11 @@ function normalizeResponse(action, data) {
             case 'listar_usuarios':
                 return data.map(u => ({
                     ...u,
-                    ultimo_acesso: u.ultimo_acesso || null,
+                    criado_em: u.criado_em || null,
                     diagnosticos_count: parseInt(u.diagnosticos_count) || 0
                 }));
+            case 'listar_logs_atividade':
+                return data;
             case 'dashboard_completo':
             case 'dashboard_metricas':
                 // n8n returns [{ total_usuarios, ... }]
@@ -379,7 +381,8 @@ function navToAdmin(viewId) {
     // Update breadcrumb
     const breadcrumbs = {
         'dashboard': 'Dashboard', 'users': 'Gestão de Usuários', 'tickets': 'Interações / Suporte',
-        'billing': 'Controle de Custos', 'health': 'Health Monitor', 'consultants': 'Consultores'
+        'billing': 'Controle de Custos', 'health': 'Health Monitor', 'consultants': 'Consultores',
+        'logs': 'Logs de Atividade'
     };
     document.getElementById('breadcrumb-current').textContent = breadcrumbs[viewId] || viewId;
 
@@ -391,6 +394,7 @@ function navToAdmin(viewId) {
         case 'billing': loadBilling(); break;
         case 'health': loadHealth(); break;
         case 'consultants': loadConsultants(); break;
+        case 'logs': loadLogs(1); break;
     }
 }
 
@@ -580,7 +584,7 @@ function renderUsersTable() {
             <td>${esc(u.empresa) || '---'}</td>
             <td><span class="badge badge-${esc(planoBase)}">${esc(planoLabel)}</span></td>
             <td><span class="badge badge-${esc(u.status)}"><i class="fa-solid fa-circle" style="font-size:0.35rem"></i> ${esc(u.status)}</span></td>
-            <td style="font-size:0.75rem;color:var(--text-muted)">${u.ultimo_acesso ? new Date(u.ultimo_acesso).toLocaleDateString('pt-BR') : '---'}</td>
+            <td style="font-size:0.75rem;color:var(--text-muted)">${u.criado_em ? new Date(u.criado_em).toLocaleDateString('pt-BR') : '---'}</td>
             <td style="font-weight:900;text-align:center">${u.diagnosticos_count}</td>
             <td style="text-align:right">
                 <div style="display:flex;gap:0.4rem;justify-content:flex-end">
@@ -621,7 +625,7 @@ async function submitCreateUser(event) {
         }
     }
 
-    const data = await adminGateway('criar_usuario', {
+    const payload = {
         nome: form.querySelector('#new-user-name').value.trim(),
         email: form.querySelector('#new-user-email').value.trim(),
         senha: form.querySelector('#new-user-password').value.trim(),
@@ -629,7 +633,9 @@ async function submitCreateUser(event) {
         segmento: form.querySelector('#new-user-segment').value,
         plano: planVal,
         role: form.querySelector('#new-user-role').value
-    });
+    };
+    console.log('[DEBUG-TEMP] criar_usuario payload:', JSON.stringify(payload)); // DEBUG-TEMP — remover após confirmar causa do autofill
+    const data = await adminGateway('criar_usuario', payload);
 
     const isSuccess = data && (data.sucesso || data.id);
     if (isSuccess) {
@@ -1358,6 +1364,75 @@ async function submitTicketResponse(event) {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Resposta';
     }
+}
+
+// ===== LOGS DE ATIVIDADE =====
+window._logsPage = 1;
+const EVENTO_LABELS = {
+    'login_usuario':    'Login (Usuário)',
+    'login_consultor':  'Login (Consultor)',
+    'login_admin':      'Login (Admin)',
+    'usuario_criado':   'Usuário Criado',
+    'usuario_editado':  'Usuário Editado',
+    'usuario_excluido': 'Usuário Excluído',
+    'senha_resetada':   'Senha Resetada',
+};
+const PAPEL_BADGE = { admin: 'badge-admin', consultor: 'badge-partner', usuario: 'badge-essencial' };
+
+async function loadLogs(page = 1) {
+    page = Math.max(1, page);
+    window._logsPage = page;
+    const limite = 25;
+    const offset  = (page - 1) * limite;
+    const tipo    = document.getElementById('log-filter-tipo')?.value || null;
+    const inicio  = document.getElementById('log-filter-inicio')?.value || null;
+    const fim     = document.getElementById('log-filter-fim')?.value || null;
+
+    const tbody = document.getElementById('logs-table-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Carregando...</td></tr>';
+
+    const raw = await adminGateway('listar_logs_atividade', {
+        limite, offset,
+        tipo_evento:  tipo   || undefined,
+        data_inicio:  inicio || undefined,
+        data_fim:     fim    || undefined,
+    });
+
+    const logs = Array.isArray(raw) ? raw : [];
+    renderLogs(logs);
+
+    const prevBtn = document.getElementById('log-btn-prev');
+    const nextBtn = document.getElementById('log-btn-next');
+    const pageInfo = document.getElementById('log-page-info');
+    if (prevBtn) prevBtn.disabled = page <= 1;
+    if (nextBtn) nextBtn.disabled = logs.length < limite;
+    if (pageInfo) pageInfo.textContent = `Página ${page}`;
+}
+
+function renderLogs(logs) {
+    const tbody = document.getElementById('logs-table-body');
+    if (!tbody) return;
+
+    if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Nenhum registro encontrado.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = logs.map(l => {
+        const dt     = l.criado_em ? new Date(l.criado_em).toLocaleString('pt-BR') : '---';
+        const evento = EVENTO_LABELS[l.tipo_evento] || l.tipo_evento || '---';
+        const papel  = l.ator_papel || '';
+        const badge  = PAPEL_BADGE[papel] || '';
+        const alvo   = esc(l.alvo_nome || l.alvo_id || '---');
+        const det    = l.metadados ? esc(JSON.stringify(l.metadados)) : '---';
+        return `<tr>
+            <td style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap">${esc(dt)}</td>
+            <td>${esc(l.ator_nome || l.ator_id || '---')}${papel ? ` <span class="badge ${badge}" style="font-size:0.6rem;vertical-align:middle">${esc(papel)}</span>` : ''}</td>
+            <td><span class="badge" style="background:var(--brand-primary-alpha,rgba(99,102,241,.12));color:var(--brand-500,#6366f1);font-size:0.7rem">${esc(evento)}</span></td>
+            <td style="font-size:0.8rem">${alvo}</td>
+            <td style="font-size:0.7rem;color:var(--text-muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${det}">${det}</td>
+        </tr>`;
+    }).join('');
 }
 
 /* ============================================================

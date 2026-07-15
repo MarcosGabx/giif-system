@@ -2,17 +2,22 @@
 .claude/
 
 # Arquivos de trabalho do root (deploy é feito via for_deploy/)
-index.html
-admin.html
-_headers
-_redirects
-css/
-js/
+/index.html
+/admin.html
+/_headers
+/_redirects
+/css/
+/js/
 
 # Arquivos internos / scripts
 fix_workflow.py
+fix_admin_bugs.py
+patch_v2_final.py
 PROJECT_SCOPE.md
 docs/
+
+# Workflows n8n (arquivos de trabalho local — root apenas)
+/GIIF*.json
 
 # Backups e arquivos temporários
 *.zip
