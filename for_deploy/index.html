@@ -904,13 +904,24 @@
             max-width: 100vw;
             display: flex;
             flex-direction: column;
-            box-shadow: -6px 0 32px rgba(0,0,0,0.22);
+            box-shadow: -8px 0 40px rgba(0,0,0,0.28);
             transform: translateX(100%);
-            transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+            transition: transform 0.24s cubic-bezier(0.4,0,0.2,1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        #tm-detail-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3B55E6, #6366f1);
+            z-index: 2;
+            flex-shrink: 0;
         }
         #tm-detail-overlay.tdp-open #tm-detail-panel { transform: translateX(0); }
-        .tdp-light { background: #fff; color: #0f172a; }
-        .tdp-dark  { background: #1e293b; color: #f1f5f9; }
+        .tdp-light { background: rgba(255,255,255,0.98); color: #0f172a; border-left: 1px solid rgba(0,0,0,0.07); }
+        .tdp-dark  { background: rgba(15,23,42,0.98);   color: #f1f5f9; border-left: 1px solid rgba(255,255,255,0.07); }
         .tdp-label { font-size: 12px; font-weight: 600; color: #64748b; min-width: 110px; }
         .tdp-avatar {
             width: 28px; height: 28px; border-radius: 50%;
@@ -4793,83 +4804,123 @@
 
         function _renderTasksHTML(tasks) {
             if (!tasks.length) {
-                return `<p style="text-align:center;color:#94a3b8;font-size:12px;padding:20px 0">Nenhuma tarefa. Clique em "+ Nova Tarefa" para começar.</p>`;
+                return `<div style="text-align:center;padding:32px 0">
+                    <i class="fa-solid fa-list-check" style="font-size:28px;color:#cbd5e1;display:block;margin-bottom:10px"></i>
+                    <p style="color:#94a3b8;font-size:13px;font-weight:600;margin-bottom:4px">Nenhuma tarefa ainda.</p>
+                    <p style="color:#cbd5e1;font-size:11px">Clique em "+ Nova Tarefa" para começar.</p>
+                </div>`;
             }
-            const isDark = document.documentElement.classList.contains('dark');
-            const rowBg    = isDark ? 'rgba(15,23,42,0.6)'     : 'rgba(248,250,252,0.9)';
-            const rowBd    = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-            const inputClr = isDark ? '#e2e8f0' : '#1e293b';
-            const inputBd  = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
-            const inputBg  = 'transparent';
+            const isDark   = document.documentElement.classList.contains('dark');
+            const cardBg   = isDark ? 'rgba(15,23,42,0.55)'    : 'rgba(255,255,255,0.88)';
+            const cardBd   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+            const subBd    = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+            const textClr  = isDark ? '#e2e8f0' : '#0f172a';
 
             return tasks.map((t, ti) => {
-                const subtasksDone  = (t.subtarefas||[]).filter(s => s.concluida).length;
-                const subtasksTotal = (t.subtarefas||[]).length;
-                const subBadge = subtasksTotal
-                    ? `<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(99,102,241,0.12);color:#6366f1;font-weight:800">${subtasksDone}/${subtasksTotal}</span>`
+                const subTotal = (t.subtarefas||[]).length;
+                const subDone  = (t.subtarefas||[]).filter(s => s.concluida).length;
+
+                // Left-border status color
+                let leftClr = '#3B55E6';
+                if (t.concluida) { leftClr = '#10b981'; }
+                else if (t.prazo) {
+                    const d = new Date(t.prazo + 'T00:00:00'), now = new Date(); now.setHours(0,0,0,0);
+                    if (d < now) leftClr = '#ef4444';
+                    else if ((d - now) / 86400000 <= 3) leftClr = '#f59e0b';
+                }
+
+                // Date badge
+                const dateBadge = t.prazo ? (() => {
+                    const d = new Date(t.prazo + 'T00:00:00'), now = new Date(); now.setHours(0,0,0,0);
+                    const overdue = d < now && !t.concluida;
+                    const fmt = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+                    const clr = overdue ? '#ef4444' : (t.concluida ? '#10b981' : '#64748b');
+                    const bg  = overdue ? 'rgba(239,68,68,0.09)' : (t.concluida ? 'rgba(16,185,129,0.09)' : 'rgba(100,116,139,0.09)');
+                    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${bg};color:${clr};letter-spacing:0.02em"><i class="fa-regular fa-calendar" style="font-size:9px"></i>${fmt}</span>`;
+                })() : '';
+
+                // Responsible badge
+                const respBadge = t.responsavel_nome ? (() => {
+                    const ini = t.responsavel_nome.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+                    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px 2px 4px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(59,85,230,0.08);color:#3B55E6">
+                        <span style="width:16px;height:16px;border-radius:50%;background:#3B55E6;color:#fff;font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${ini}</span>
+                        ${DOMPurify.sanitize(t.responsavel_nome)}
+                    </span>`;
+                })() : '';
+
+                // Subtask badge
+                const subBadge = subTotal
+                    ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(99,102,241,0.09);color:#6366f1"><i class="fa-solid fa-check-double" style="font-size:9px"></i>${subDone}/${subTotal}</span>`
                     : '';
 
+                // Subtask rows (expanded)
                 const subRows = (t.subtarefas||[]).map((s, si) => `
-                    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid ${rowBd}">
+                    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid ${subBd}">
                         <input type="checkbox" ${s.concluida ? 'checked' : ''} onchange="taskToggleSub(${ti},${si},this.checked)"
                             style="width:13px;height:13px;cursor:pointer;flex-shrink:0;accent-color:#6366f1">
                         <input type="text" value="${DOMPurify.sanitize(s.texto)}" placeholder="Subtarefa..."
                             onblur="taskEditSub(${ti},${si},this.value)"
-                            style="flex:1;border:none;background:${inputBg};font-size:11px;outline:none;color:${s.concluida ? '#94a3b8' : inputClr};${s.concluida ? 'text-decoration:line-through' : ''}"
+                            style="flex:1;border:none;background:transparent;font-size:11px;outline:none;font-family:inherit;color:${s.concluida ? '#94a3b8' : textClr};${s.concluida ? 'text-decoration:line-through' : ''}"
                             onmousedown="event.stopPropagation()">
                         <button onclick="taskDeleteSub(${ti},${si})"
-                            style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px 5px;border-radius:4px;font-size:11px;flex-shrink:0" title="Remover subtarefa">
+                            style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px 4px;font-size:10px;flex-shrink:0;opacity:0.5;transition:opacity 0.15s"
+                            onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>`).join('');
 
                 return `
-                <div style="border:1px solid ${rowBd};border-radius:10px;padding:10px 12px;margin-bottom:8px;background:${rowBg}">
-                    <div style="display:flex;align-items:flex-start;gap:8px">
+                <div style="position:relative;background:${cardBg};border:1px solid ${cardBd};border-left:3px solid ${leftClr};border-radius:12px;padding:13px 14px;margin-bottom:8px;
+                    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+                    transition:transform 0.15s ease,box-shadow 0.15s ease"
+                    onmouseover="this.style.transform='translateX(2px)';this.style.boxShadow='0 4px 20px -4px rgba(0,0,0,0.14)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow=''">
+
+                    <div style="display:flex;align-items:flex-start;gap:10px">
+                        <!-- Checkbox -->
                         <input type="checkbox" ${t.concluida ? 'checked' : ''} onchange="taskToggle(${ti},this.checked)"
-                            style="margin-top:3px;width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:#3B55E6">
+                            style="margin-top:2px;width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#3B55E6">
+
+                        <!-- Task title (read-only; edit via panel) -->
                         <div style="flex:1;min-width:0">
-                            <input type="text" value="${DOMPurify.sanitize(t.texto)}" placeholder="Texto da tarefa..."
-                                onblur="taskEditTexto(${ti},this.value)"
-                                style="width:100%;border:none;background:${inputBg};font-size:13px;font-weight:700;outline:none;color:${t.concluida ? '#94a3b8' : inputClr};${t.concluida ? 'text-decoration:line-through' : ''}"
-                                onmousedown="event.stopPropagation()">
-                            <div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">
-                                <input type="date" value="${t.prazo||''}" onchange="taskEditPrazo(${ti},this.value)"
-                                    style="border:1px solid ${inputBd};border-radius:5px;padding:2px 6px;font-size:10px;background:${inputBg};color:${inputClr};cursor:pointer"
-                                    onmousedown="event.stopPropagation()">
-                                <select onchange="taskEditResponsavel(${ti},this.value)"
-                                    style="border:1px solid ${inputBd};border-radius:5px;padding:2px 5px;font-size:10px;background:${isDark ? '#1e293b' : '#f8fafc'};color:${inputClr};max-width:175px;cursor:pointer"
-                                    onmousedown="event.stopPropagation()">
-                                    <option value="">— Responsável —</option>
-                                    ${_buildResponsavelOptions(t.responsavel_consultor_id, t.responsavel_nome)}
-                                </select>
-                                ${t._showOutroInput ? `<input type="text" value="${DOMPurify.sanitize(t.responsavel_nome||'')}" placeholder="Nome..."
-                                    onblur="taskEditResponsavelManual(${ti},this.value)"
-                                    style="border:1px solid ${inputBd};border-radius:5px;padding:2px 6px;font-size:10px;background:${inputBg};color:${inputClr};width:110px"
-                                    onmousedown="event.stopPropagation()">` : ''}
-                                ${subBadge}
+                            <div style="font-size:13px;font-weight:700;line-height:1.45;letter-spacing:-0.01em;
+                                color:${t.concluida ? '#94a3b8' : textClr};
+                                ${t.concluida ? 'text-decoration:line-through;' : ''}
+                                transition:color 0.2s">
+                                ${DOMPurify.sanitize(t.texto)}
                             </div>
+                            ${(dateBadge || respBadge || subBadge) ? `
+                            <div style="display:flex;align-items:center;gap:5px;margin-top:8px;flex-wrap:wrap">
+                                ${dateBadge}${respBadge}${subBadge}
+                            </div>` : ''}
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">
+
+                        <!-- Action icons -->
+                        <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
                             <button onclick="_tmDetOpen(${ti})" title="Editar detalhes"
-                                style="background:none;border:none;color:#3B55E6;cursor:pointer;padding:3px 5px;border-radius:5px;font-size:11px">
+                                style="background:none;border:none;cursor:pointer;color:#3B55E6;padding:5px 6px;border-radius:7px;font-size:12px;opacity:0.65;transition:opacity 0.15s,background 0.15s"
+                                onmouseover="this.style.opacity='1';this.style.background='rgba(59,85,230,0.09)'" onmouseout="this.style.opacity='0.65';this.style.background='none'">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
-                            <button onclick="taskToggleSubList(${ti})" title="Subtarefas"
-                                style="background:none;border:none;color:#6366f1;cursor:pointer;padding:3px 5px;border-radius:5px;font-size:11px">
+                            <button onclick="taskToggleSubList(${ti})" title="${subTotal ? 'Subtarefas (' + subDone + '/' + subTotal + ')' : 'Subtarefas'}"
+                                style="background:none;border:none;cursor:pointer;color:#6366f1;padding:5px 6px;border-radius:7px;font-size:12px;opacity:0.65;transition:opacity 0.15s,background 0.15s"
+                                onmouseover="this.style.opacity='1';this.style.background='rgba(99,102,241,0.09)'" onmouseout="this.style.opacity='0.65';this.style.background='none'">
                                 <i class="fa-solid fa-chevron-${t._expanded ? 'up' : 'down'}"></i>
                             </button>
                             <button onclick="taskDelete(${ti})" title="Excluir tarefa"
-                                style="background:none;border:none;color:#ef4444;cursor:pointer;padding:3px 5px;border-radius:5px;font-size:11px">
+                                style="background:none;border:none;cursor:pointer;color:#ef4444;padding:5px 6px;border-radius:7px;font-size:12px;opacity:0.55;transition:opacity 0.15s,background 0.15s"
+                                onmouseover="this.style.opacity='1';this.style.background='rgba(239,68,68,0.09)'" onmouseout="this.style.opacity='0.55';this.style.background='none'">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
                     </div>
+
                     ${t._expanded ? `
-                    <div style="margin-top:8px;padding-top:8px;border-top:1px dashed ${rowBd};padding-left:24px">
-                        ${subRows}
+                    <div style="margin-top:10px;padding-top:10px;border-top:1px solid ${subBd};padding-left:26px">
+                        ${subRows || '<p style="font-size:11px;color:#94a3b8;padding:4px 0">Nenhuma subtarefa.</p>'}
                         <button onclick="taskAddSub(${ti})"
-                            style="margin-top:6px;background:none;border:1px dashed rgba(99,102,241,0.4);color:#6366f1;border-radius:6px;padding:3px 10px;font-size:10px;font-weight:800;cursor:pointer;width:100%">
+                            style="margin-top:7px;background:none;border:1px dashed rgba(99,102,241,0.35);color:#6366f1;border-radius:8px;padding:4px 12px;font-size:10px;font-weight:800;cursor:pointer;width:100%;letter-spacing:0.07em;transition:background 0.15s"
+                            onmouseover="this.style.background='rgba(99,102,241,0.06)'" onmouseout="this.style.background='none'">
                             <i class="fa-solid fa-plus"></i> Subtarefa
                         </button>
                     </div>` : ''}
@@ -4906,106 +4957,101 @@
                 ? `<span class="tdp-avatar" id="tm-det-resp-avatar" title="${DOMPurify.sanitize(respName)}">${initials}</span>`
                 : `<span class="tdp-avatar" id="tm-det-resp-avatar" style="display:none"></span>`;
 
+            const isDarkDet = document.documentElement.classList.contains('dark');
+            const metaBg  = isDarkDet ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)';
+            const metaBd  = isDarkDet ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+            const inpBd   = isDarkDet ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+            const iconClr = isDarkDet ? '#475569' : '#94a3b8';
+            const lblClr  = isDarkDet ? '#64748b' : '#94a3b8';
+            const subTotal = (t.subtarefas||[]).length;
+            const subDone  = (t.subtarefas||[]).filter(s=>s.concluida).length;
+
             document.getElementById('tm-det-body').innerHTML = `
                 <!-- Título -->
                 <input id="tm-det-titulo" type="text"
                     value="${DOMPurify.sanitize(t.texto)}" placeholder="Título da tarefa"
-                    style="width:100%;font-size:16px;font-weight:700;border:none;border-bottom:2px solid #3B55E6;padding:4px 0 10px;margin-bottom:20px;background:transparent;color:inherit;outline:none;font-family:inherit"
+                    style="width:100%;font-size:17px;font-weight:800;letter-spacing:-0.02em;border:none;border-bottom:2.5px solid #3B55E6;padding:0 0 10px;margin-bottom:20px;background:transparent;color:inherit;outline:none;font-family:inherit"
                     onmousedown="event.stopPropagation()">
 
-                <!-- Responsáveis -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-                    <span class="tdp-label">Responsáveis:</span>
-                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                        ${avatarHTML}
-                        <select id="tm-det-resp" onchange="_tmDetChangeResp(this.value)"
-                            class="tdp-pill-inp" onmousedown="event.stopPropagation()">
-                            <option value="">— Nenhum —</option>
-                            ${_buildResponsavelOptions(t.responsavel_consultor_id, t.responsavel_nome)}
-                        </select>
-                    </div>
-                </div>
-                ${t._showOutroInput ? `
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-                    <span class="tdp-label">Nome:</span>
-                    <input id="tm-det-resp-manual" type="text"
-                        value="${DOMPurify.sanitize(t.responsavel_nome||'')}" placeholder="Nome do responsável..."
-                        class="tdp-inp" style="flex:1" onmousedown="event.stopPropagation()"
-                        oninput="_tmDetEditRespManual(this.value)">
-                </div>` : ''}
+                <!-- Meta block: Responsável, Vencimento, Início -->
+                <div style="display:flex;flex-direction:column;gap:0;margin-bottom:20px;border-radius:10px;border:1px solid ${metaBd};background:${metaBg};overflow:hidden">
 
-                <!-- Vencimento -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-                    <span class="tdp-label">Vencimento:</span>
-                    <input type="date" id="tm-det-prazo" value="${prazoVal}"
-                        class="tdp-pill-inp" onmousedown="event.stopPropagation()">
-                </div>
-
-                <!-- Agendamento -->
-                <div class="tdp-section">
-                    <div class="tdp-label" style="margin-bottom:10px">Agendamento:</div>
-                    <div style="display:flex;gap:16px;padding-left:8px;flex-wrap:wrap">
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <span style="font-size:12px;color:#64748b">Início:</span>
-                            <input type="date" id="tm-det-inicio" value="${inicioVal}"
-                                class="tdp-pill-inp" onmousedown="event.stopPropagation()">
-                        </div>
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <span style="font-size:12px;color:#64748b">Ação:</span>
-                            <input type="text" id="tm-det-acao"
-                                value="${DOMPurify.sanitize(t.acao||'')}" placeholder="Nenhuma ação"
-                                class="tdp-pill-inp" style="min-width:110px" onmousedown="event.stopPropagation()">
+                    <!-- Responsável -->
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid ${metaBd}">
+                        <i class="fa-solid fa-user" style="font-size:10px;color:${iconClr};width:14px;text-align:center;flex-shrink:0"></i>
+                        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:80px;flex-shrink:0">Responsável</span>
+                        <div style="display:flex;align-items:center;gap:7px;flex:1">
+                            ${avatarHTML}
+                            <select id="tm-det-resp" onchange="_tmDetChangeResp(this.value)"
+                                style="flex:1;border:1px solid ${inpBd};border-radius:7px;padding:3px 8px;background:transparent;color:inherit;font-size:12px;cursor:pointer;font-family:inherit;outline:none;transition:border-color 0.2s"
+                                onfocus="this.style.borderColor='#3B55E6'" onblur="this.style.borderColor='${inpBd}'"
+                                onmousedown="event.stopPropagation()">
+                                <option value="">— Nenhum —</option>
+                                ${_buildResponsavelOptions(t.responsavel_consultor_id, t.responsavel_nome)}
+                            </select>
                         </div>
                     </div>
-                </div>
+                    ${t._showOutroInput ? `
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid ${metaBd}">
+                        <span style="width:14px;flex-shrink:0"></span>
+                        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:80px;flex-shrink:0">Nome</span>
+                        <input id="tm-det-resp-manual" type="text"
+                            value="${DOMPurify.sanitize(t.responsavel_nome||'')}" placeholder="Nome do responsável..."
+                            style="flex:1;border:none;border-bottom:1px solid rgba(59,85,230,0.3);background:transparent;color:inherit;font-size:12px;outline:none;padding:2px 0;font-family:inherit"
+                            onmousedown="event.stopPropagation()" oninput="_tmDetEditRespManual(this.value)">
+                    </div>` : ''}
 
-                <!-- Progresso -->
-                <div class="tdp-section">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                        <span class="tdp-label" style="min-width:auto">Progresso:</span>
-                        <span id="tm-det-prog-lbl" style="font-size:13px;font-weight:700;color:#3B55E6">${t.progresso||0}%</span>
+                    <!-- Vencimento -->
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid ${metaBd}">
+                        <i class="fa-regular fa-calendar" style="font-size:10px;color:${iconClr};width:14px;text-align:center;flex-shrink:0"></i>
+                        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:80px;flex-shrink:0">Vencimento</span>
+                        <input type="date" id="tm-det-prazo" value="${prazoVal}"
+                            style="border:1px solid ${inpBd};border-radius:7px;padding:3px 8px;background:transparent;color:inherit;font-size:12px;cursor:pointer;outline:none;transition:border-color 0.2s"
+                            onfocus="this.style.borderColor='#3B55E6'" onblur="this.style.borderColor='${inpBd}'"
+                            onmousedown="event.stopPropagation()">
                     </div>
-                    <input type="range" id="tm-det-progresso" min="0" max="100" value="${t.progresso||0}"
-                        oninput="document.getElementById('tm-det-prog-lbl').textContent=this.value+'%'"
-                        style="width:100%;accent-color:#3B55E6;cursor:pointer" onmousedown="event.stopPropagation()">
+
+                    <!-- Início -->
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px">
+                        <i class="fa-regular fa-clock" style="font-size:10px;color:${iconClr};width:14px;text-align:center;flex-shrink:0"></i>
+                        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:80px;flex-shrink:0">Início</span>
+                        <input type="date" id="tm-det-inicio" value="${inicioVal}"
+                            style="border:1px solid ${inpBd};border-radius:7px;padding:3px 8px;background:transparent;color:inherit;font-size:12px;cursor:pointer;outline:none;transition:border-color 0.2s"
+                            onfocus="this.style.borderColor='#3B55E6'" onblur="this.style.borderColor='${inpBd}'"
+                            onmousedown="event.stopPropagation()">
+                    </div>
                 </div>
 
-                <hr style="border:none;border-top:1px solid rgba(100,116,139,0.15);margin:4px 0 18px">
+                <hr style="border:none;border-top:1px solid ${metaBd};margin:0 0 18px">
 
                 <!-- Descrição -->
                 <div class="tdp-section">
-                    <div class="tdp-label" style="display:block;margin-bottom:8px">Descrição</div>
-                    <textarea id="tm-det-descricao" placeholder="Descrição da tarefa (clique para escrever)"
-                        class="tdp-inp" style="min-height:72px;resize:vertical"
+                    <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.15em;color:${lblClr};margin-bottom:9px;display:flex;align-items:center;gap:6px">
+                        <i class="fa-solid fa-align-left" style="font-size:10px;color:${iconClr}"></i>Descrição
+                    </div>
+                    <textarea id="tm-det-descricao" placeholder="Adicione uma descrição..."
+                        style="width:100%;min-height:72px;padding:10px 12px;border-radius:9px;border:1.5px solid ${inpBd};background:${isDarkDet ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)'};color:inherit;font-size:13px;line-height:1.5;resize:vertical;font-family:inherit;outline:none;transition:border-color 0.2s"
+                        onfocus="this.style.borderColor='#3B55E6'" onblur="this.style.borderColor='${inpBd}'"
                         onmousedown="event.stopPropagation()">${DOMPurify.sanitize(t.descricao||'')}</textarea>
                 </div>
 
                 <!-- Checklist -->
                 <div class="tdp-section">
-                    <div class="tdp-section-head">
-                        <span class="tdp-label" style="min-width:auto">Checklist</span>
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <button class="tdp-btn-ghost" onclick="_tmDetClearChecklist()">Limpar lista</button>
-                            <button class="tdp-btn-circle" onclick="_tmDetAddCheck()" title="Adicionar item">
-                                <i class="fa-solid fa-plus"></i>
-                            </button>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                        <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.15em;color:${lblClr};display:flex;align-items:center;gap:6px">
+                            <i class="fa-solid fa-list-check" style="font-size:10px;color:${iconClr}"></i>Checklist
+                            ${subTotal ? `<span style="padding:1px 7px;border-radius:6px;background:rgba(99,102,241,0.1);color:#6366f1;font-size:10px;letter-spacing:0;font-weight:700">${subDone}/${subTotal}</span>` : ''}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:4px">
+                            <button class="tdp-btn-ghost" onclick="_tmDetClearChecklist()" style="font-size:10px;padding:2px 8px">Limpar</button>
+                            <button class="tdp-btn-circle" onclick="_tmDetAddCheck()"><i class="fa-solid fa-plus"></i></button>
                         </div>
                     </div>
                     <div id="tm-det-checklist"></div>
                 </div>
-
-                <!-- Etiquetas -->
-                <div class="tdp-section">
-                    <div class="tdp-label" style="display:block;margin-bottom:8px">Etiquetas</div>
-                    <div id="tm-det-tags" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px"></div>
-                    <input id="tm-det-tag-inp" placeholder="+ Adicionar etiqueta e pressionar Enter"
-                        class="tdp-inp" style="font-size:12px"
-                        onkeydown="_tmDetAddTag(event)" onmousedown="event.stopPropagation()">
-                </div>
             `;
 
             _tmDetRenderChecklist();
-            _tmDetRenderTags();
 
             const overlay = document.getElementById('tm-detail-overlay');
             overlay.style.display = 'block';
@@ -5025,14 +5071,10 @@
                 const titulo    = get('tm-det-titulo');
                 const prazo     = get('tm-det-prazo');
                 const inicio    = get('tm-det-inicio');
-                const acao      = get('tm-det-acao');
-                const progresso = get('tm-det-progresso');
                 const descricao = get('tm-det-descricao');
                 if (titulo)    t.texto     = titulo.value.trim() || 'Nova tarefa';
                 if (prazo)     t.prazo     = prazo.value || null;
                 if (inicio)    t.inicio    = inicio.value || null;
-                if (acao)      t.acao      = acao.value.trim();
-                if (progresso) t.progresso = parseInt(progresso.value, 10);
                 if (descricao) t.descricao = descricao.value.trim();
             }
             _tmDetIdx = null;
@@ -5105,25 +5147,32 @@
             const items = t.subtarefas || [];
             const isDark = document.documentElement.classList.contains('dark');
             const clr    = isDark ? '#e2e8f0' : '#1e293b';
+            const bd     = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            const rowAlt = isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.015)';
 
             if (!items.length) {
-                container.innerHTML = `<div class="tdp-empty">Nenhum item para exibir</div>`;
+                container.innerHTML = `<div style="font-size:12px;color:#94a3b8;padding:12px;text-align:center;border-radius:9px;border:1.5px dashed ${bd}">
+                    <i class="fa-solid fa-check" style="display:block;font-size:18px;margin-bottom:5px;opacity:0.25"></i>Nenhum item. Clique em <strong>+</strong> para adicionar.
+                </div>`;
                 return;
             }
-            container.innerHTML = items.map((s, ci) => `
-                <div class="tdp-check-row">
+            container.innerHTML = `<div style="border:1px solid ${bd};border-radius:9px;overflow:hidden">` +
+                items.map((s, ci) => `
+                <div class="tdp-check-row" style="padding:8px 12px;${ci % 2 === 1 ? 'background:' + rowAlt : ''};${ci > 0 ? 'border-top:1px solid ' + bd : ''}">
                     <input type="checkbox" ${s.concluida ? 'checked' : ''}
                         onchange="_tmDetToggleCheck(${ci},this.checked)"
                         style="width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:#3B55E6">
                     <input type="text" value="${DOMPurify.sanitize(s.texto)}" placeholder="Item do checklist..."
                         onblur="_tmDetEditCheck(${ci},this.value)"
-                        style="flex:1;border:none;background:transparent;font-size:12px;outline:none;color:${s.concluida ? '#94a3b8' : clr};${s.concluida ? 'text-decoration:line-through' : ''}"
+                        style="flex:1;border:none;background:transparent;font-size:12px;outline:none;font-family:inherit;
+                            color:${s.concluida ? '#94a3b8' : clr};${s.concluida ? 'text-decoration:line-through;' : ''}"
                         onmousedown="event.stopPropagation()">
                     <button onclick="_tmDetDeleteCheck(${ci})"
-                        style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px 4px;font-size:11px;flex-shrink:0">
+                        style="background:none;border:none;color:#ef4444;cursor:pointer;padding:2px 5px;font-size:11px;flex-shrink:0;opacity:0.5;transition:opacity 0.15s"
+                        onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
-                </div>`).join('');
+                </div>`).join('') + `</div>`;
         }
 
         function _tmDetToggleCheck(ci, val) {
@@ -5336,11 +5385,12 @@
             await Swal.fire({
                 title: `<i class="fa-solid fa-list-check" style="color:#3B55E6;margin-right:8px"></i> Tarefas — ${nodeLabel}`,
                 html: `
-                    <div id="tasks-modal-body" style="max-height:52vh;overflow-y:auto;text-align:left;padding:2px 0"></div>
+                    <div id="tasks-modal-body" style="max-height:50vh;overflow-y:auto;text-align:left;padding:2px 0 4px"></div>
                     <button onclick="taskAddNew()"
-                        style="margin-top:10px;width:100%;background:rgba(59,85,230,0.07);border:1.5px dashed rgba(59,85,230,0.35);color:#3B55E6;border-radius:8px;padding:7px;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:0.06em;transition:background 0.2s"
-                        onmouseover="this.style.background='rgba(59,85,230,0.14)'" onmouseout="this.style.background='rgba(59,85,230,0.07)'">
-                        <i class="fa-solid fa-plus"></i> NOVA TAREFA
+                        style="margin-top:12px;width:100%;background:transparent;border:1.5px dashed rgba(59,85,230,0.4);color:#3B55E6;border-radius:10px;padding:9px;font-size:10.5px;font-weight:800;cursor:pointer;letter-spacing:0.1em;text-transform:uppercase;transition:background 0.2s,border-color 0.2s,box-shadow 0.2s"
+                        onmouseover="this.style.background='rgba(59,85,230,0.07)';this.style.borderColor='rgba(59,85,230,0.65)';this.style.boxShadow='0 0 12px rgba(59,85,230,0.12)'"
+                        onmouseout="this.style.background='transparent';this.style.borderColor='rgba(59,85,230,0.4)';this.style.boxShadow='none'">
+                        <i class="fa-solid fa-plus" style="margin-right:6px"></i>Nova Tarefa
                     </button>`,
                 didOpen: () => { _refreshTaskModal(); },
                 showCancelButton: false,
@@ -6175,23 +6225,28 @@
     <div id="tm-detail-overlay" onclick="if(event.target===this)_tmDetClose()">
         <div id="tm-detail-panel">
             <!-- Header -->
-            <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid rgba(100,116,139,0.15);flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid rgba(100,116,139,0.12);flex-shrink:0;position:relative;z-index:1;margin-top:3px">
                 <button onclick="_tmDetClose()" title="Voltar"
-                    style="background:none;border:none;cursor:pointer;color:#64748b;font-size:16px;padding:4px 8px;border-radius:6px;line-height:1">
+                    style="background:none;border:none;cursor:pointer;color:#64748b;font-size:15px;padding:6px 8px;border-radius:8px;line-height:1;transition:background 0.15s,color 0.15s"
+                    onmouseover="this.style.background='rgba(100,116,139,0.1)';this.style.color='#0f172a'"
+                    onmouseout="this.style.background='none';this.style.color='#64748b'">
                     <i class="fa-solid fa-arrow-left"></i>
                 </button>
-                <div style="flex:1"></div>
+                <span style="flex:1;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:#64748b">Detalhe da Tarefa</span>
                 <button onclick="_tmDetClose()"
-                    style="background:#3B55E6;border:none;cursor:pointer;color:#fff;font-size:12px;font-weight:700;padding:6px 20px;border-radius:8px;letter-spacing:0.04em">
+                    style="background:#3B55E6;border:none;cursor:pointer;color:#fff;font-size:11px;font-weight:800;padding:7px 18px;border-radius:8px;letter-spacing:0.06em;transition:background 0.15s,box-shadow 0.15s"
+                    onmouseover="this.style.background='#2F44C8';this.style.boxShadow='0 0 12px rgba(59,85,230,0.35)'"
+                    onmouseout="this.style.background='#3B55E6';this.style.boxShadow='none'">
                     Salvar
                 </button>
                 <button onclick="_tmDetClose()" title="Fechar"
-                    style="background:none;border:none;cursor:pointer;color:#64748b;font-size:16px;padding:4px 8px;border-radius:6px;line-height:1">
+                    style="background:none;border:none;cursor:pointer;color:#64748b;font-size:15px;padding:6px 8px;border-radius:8px;line-height:1;transition:background 0.15s"
+                    onmouseover="this.style.background='rgba(100,116,139,0.1)'" onmouseout="this.style.background='none'">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
             <!-- Body -->
-            <div id="tm-det-body" style="flex:1;overflow-y:auto;padding:20px 20px 40px"></div>
+            <div id="tm-det-body" style="flex:1;overflow-y:auto;padding:22px 20px 44px"></div>
         </div>
     </div>
 
