@@ -433,7 +433,9 @@ async function loadDashboard() {
     };
 
     document.getElementById('kpi-users').textContent = data.total_users;
-    document.getElementById('kpi-mrr').textContent = `R$ ${data.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    document.getElementById('kpi-mrr').textContent = data.mrr > 0
+        ? `R$ ${data.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        : '—';
     document.getElementById('kpi-critical').textContent = data.critical_count;
     document.getElementById('kpi-diagnostics').textContent = data.diagnostics_month;
 
