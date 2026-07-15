@@ -83,7 +83,7 @@
 
         html.dark .saas-input {
             background-color: rgba(255, 255, 255, 0.03);
-            border-color: #1e293b;
+            border-color: rgba(255, 255, 255, 0.1);
             color: #F3F4F6;
         }
 
@@ -177,7 +177,7 @@
         }
 
         html.dark .dropzone {
-            border-color: #1e293b;
+            border-color: rgba(255, 255, 255, 0.08);
         }
 
         .dropzone:hover {
@@ -211,7 +211,7 @@
         }
 
         html.dark ::-webkit-scrollbar-thumb {
-            background: #1e293b;
+            background: #2e2e2e;
         }
 
         /* Toast Notifications */
@@ -326,7 +326,7 @@
         }
 
         html.dark .filter-pill:not(.active) {
-            border-color: #1e293b;
+            border-color: rgba(255, 255, 255, 0.08);
             color: #94a3b8;
         }
 
@@ -344,7 +344,7 @@
         }
 
         html.dark .mat-card {
-            background: rgba(17, 24, 39, 0.5);
+            background: rgba(30, 30, 30, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.06);
             box-shadow: 0 4px 12px -3px rgba(0, 0, 0, 0.25);
         }
@@ -509,8 +509,8 @@
         }
 
         html.dark .mapa-canvas-container {
-            background-color: #060a13;
-            background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+            background-color: #0f0f0f;
+            background-image: radial-gradient(circle, #2a2a2a 1px, transparent 1px);
         }
 
         #drawflow {
@@ -547,8 +547,8 @@
         }
 
         html.dark .glass-node {
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(28, 28, 30, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .glass-node:hover {
@@ -726,8 +726,8 @@
             pointer-events: auto;
         }
         html.dark #node-ctx-menu {
-            background: rgba(15,23,42,0.97);
-            border-color: rgba(255,255,255,0.08);
+            background: rgba(24, 24, 26, 0.98);
+            border-color: rgba(255,255,255,0.1);
         }
         .ctx-item {
             display: flex;
@@ -928,7 +928,7 @@
         }
         #tm-detail-overlay.tdp-open #tm-detail-panel { transform: translateX(0); }
         .tdp-light { background: rgba(255,255,255,0.98); color: #0f172a; border-left: 1px solid rgba(0,0,0,0.07); }
-        .tdp-dark  { background: rgba(15,23,42,0.98);   color: #f1f5f9; border-left: 1px solid rgba(255,255,255,0.07); }
+        .tdp-dark  { background: rgba(20, 20, 22, 0.99); color: #f1f5f9; border-left: 1px solid rgba(255,255,255,0.08); }
         .tdp-label { font-size: 12px; font-weight: 600; color: #64748b; min-width: 110px; }
         .tdp-avatar {
             width: 28px; height: 28px; border-radius: 50%;
@@ -980,12 +980,12 @@
         .glass-node.node-color-violet { border-left-color: #8b5cf6 !important; background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(255,255,255,0.92)) !important; }
         .glass-node.node-color-slate  { border-left-color: #64748b !important; background: linear-gradient(135deg, rgba(100,116,139,0.05), rgba(255,255,255,0.92)) !important; }
 
-        html.dark .glass-node.node-color-green  { background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(15,23,42,0.85)) !important; }
-        html.dark .glass-node.node-color-red    { background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(15,23,42,0.85)) !important; }
-        html.dark .glass-node.node-color-amber  { background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(15,23,42,0.85)) !important; }
-        html.dark .glass-node.node-color-blue   { background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(15,23,42,0.85)) !important; }
-        html.dark .glass-node.node-color-violet { background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(15,23,42,0.85)) !important; }
-        html.dark .glass-node.node-color-slate  { background: linear-gradient(135deg, rgba(100,116,139,0.08), rgba(15,23,42,0.85)) !important; }
+        html.dark .glass-node.node-color-green  { background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(28,28,30,0.88)) !important; }
+        html.dark .glass-node.node-color-red    { background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(28,28,30,0.88)) !important; }
+        html.dark .glass-node.node-color-amber  { background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(28,28,30,0.88)) !important; }
+        html.dark .glass-node.node-color-blue   { background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(28,28,30,0.88)) !important; }
+        html.dark .glass-node.node-color-violet { background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(28,28,30,0.88)) !important; }
+        html.dark .glass-node.node-color-slate  { background: linear-gradient(135deg, rgba(100,116,139,0.08), rgba(28,28,30,0.88)) !important; }
 
         /* Export overlay */
         #export-mapa-overlay {
@@ -1000,7 +1000,7 @@
             overflow: visible !important;
         }
         html.dark .mapa-export-mode .glass-node {
-            background: rgba(15, 23, 42, 0.97) !important;
+            background: rgba(28, 28, 30, 0.97) !important;
         }
         .mapa-export-mode .node-label {
             white-space: normal !important;
@@ -1074,8 +1074,8 @@
         }
 
         html.dark .mapa-tabs-bar {
-            background: rgba(15, 23, 42, 0.7);
-            border-color: rgba(255, 255, 255, 0.05);
+            background: rgba(14, 14, 16, 0.9);
+            border-color: rgba(255, 255, 255, 0.06);
         }
 
         .mapa-tab {
@@ -1190,8 +1190,8 @@
         }
         html.dark #input-contexto, html.dark #input-detalhes {
             color: #e2e8f0;
-            background: rgba(15, 23, 42, 0.6);
-            border-color: rgba(255,255,255,0.08);
+            background: rgba(30, 30, 32, 0.7);
+            border-color: rgba(255,255,255,0.1);
         }
         #input-contexto:focus, #input-detalhes:focus {
             border-color: #6366f1;
@@ -4818,7 +4818,7 @@
                 </div>`;
             }
             const isDark   = document.documentElement.classList.contains('dark');
-            const cardBg   = isDark ? 'rgba(15,23,42,0.55)'    : 'rgba(255,255,255,0.88)';
+            const cardBg   = isDark ? 'rgba(30,30,32,0.7)'      : 'rgba(255,255,255,0.88)';
             const cardBd   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
             const subBd    = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
             const textClr  = isDark ? '#e2e8f0' : '#0f172a';
@@ -4968,29 +4968,36 @@
             const metaBg  = isDarkDet ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)';
             const metaBd  = isDarkDet ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
             const inpBd   = isDarkDet ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-            const iconClr = isDarkDet ? '#475569' : '#94a3b8';
-            const lblClr  = isDarkDet ? '#64748b' : '#94a3b8';
+            const iconClr = isDarkDet ? '#6b7280' : '#94a3b8';
+            const lblClr  = isDarkDet ? '#6b7280' : '#94a3b8';
             const subTotal = (t.subtarefas||[]).length;
             const subDone  = (t.subtarefas||[]).filter(s=>s.concluida).length;
+            const pct = subTotal ? Math.round(subDone/subTotal*100) : 0;
+            const titBd   = isDarkDet ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
 
             document.getElementById('tm-det-body').innerHTML = `
                 <!-- Título -->
-                <input id="tm-det-titulo" type="text"
-                    value="${DOMPurify.sanitize(t.texto)}" placeholder="Título da tarefa"
-                    style="width:100%;font-size:17px;font-weight:800;letter-spacing:-0.02em;border:none;border-bottom:2.5px solid #3B55E6;padding:0 0 10px;margin-bottom:20px;background:transparent;color:inherit;outline:none;font-family:inherit"
-                    onmousedown="event.stopPropagation()">
+                <div style="margin-bottom:22px">
+                    <input id="tm-det-titulo" type="text"
+                        value="${DOMPurify.sanitize(t.texto)}" placeholder="Título da tarefa"
+                        style="width:100%;font-size:19px;font-weight:800;letter-spacing:-0.025em;border:none;border-bottom:2px solid ${titBd};padding:0 0 11px;background:transparent;color:inherit;outline:none;font-family:inherit;transition:border-color 0.2s;box-sizing:border-box"
+                        onfocus="this.style.borderBottomColor='#3B55E6'" onblur="this.style.borderBottomColor='${titBd}'"
+                        onmousedown="event.stopPropagation()">
+                </div>
 
-                <!-- Meta block: Responsável, Vencimento, Início -->
-                <div style="display:flex;flex-direction:column;gap:0;margin-bottom:20px;border-radius:10px;border:1px solid ${metaBd};background:${metaBg};overflow:hidden">
+                <!-- Meta: Responsável + Datas -->
+                <div style="border-radius:12px;border:1px solid ${metaBd};overflow:hidden;margin-bottom:22px">
 
-                    <!-- Responsável -->
-                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid ${metaBd}">
-                        <i class="fa-solid fa-user" style="font-size:10px;color:${iconClr};width:14px;text-align:center;flex-shrink:0"></i>
-                        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:80px;flex-shrink:0">Responsável</span>
-                        <div style="display:flex;align-items:center;gap:7px;flex:1">
+                    <!-- Responsável — linha completa -->
+                    <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:${metaBg}">
+                        <div style="width:26px;display:flex;justify-content:center;flex-shrink:0">
+                            <i class="fa-solid fa-user" style="font-size:10px;color:${iconClr}"></i>
+                        </div>
+                        <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:72px;flex-shrink:0">Responsável</span>
+                        <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
                             ${avatarHTML}
                             <select id="tm-det-resp" onchange="_tmDetChangeResp(this.value)"
-                                style="flex:1;border:1px solid ${inpBd};border-radius:7px;padding:3px 8px;background:transparent;color:inherit;font-size:12px;cursor:pointer;font-family:inherit;outline:none;transition:border-color 0.2s"
+                                style="flex:1;min-width:0;border:1px solid ${inpBd};border-radius:7px;padding:4px 8px;background:transparent;color:inherit;font-size:12px;cursor:pointer;font-family:inherit;outline:none;transition:border-color 0.2s"
                                 onfocus="this.style.borderColor='#3B55E6'" onblur="this.style.borderColor='${inpBd}'"
                                 onmousedown="event.stopPropagation()">
                                 <option value="">— Nenhum —</option>
@@ -4998,46 +5005,52 @@
                             </select>
                         </div>
                     </div>
+
                     ${t._showOutroInput ? `
-                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid ${metaBd}">
-                        <span style="width:14px;flex-shrink:0"></span>
-                        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:80px;flex-shrink:0">Nome</span>
+                    <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:${metaBg};border-top:1px solid ${metaBd}">
+                        <div style="width:26px;flex-shrink:0"></div>
+                        <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:72px;flex-shrink:0">Nome</span>
                         <input id="tm-det-resp-manual" type="text"
                             value="${DOMPurify.sanitize(t.responsavel_nome||'')}" placeholder="Nome do responsável..."
-                            style="flex:1;border:none;border-bottom:1px solid rgba(59,85,230,0.3);background:transparent;color:inherit;font-size:12px;outline:none;padding:2px 0;font-family:inherit"
+                            style="flex:1;border:none;border-bottom:1px solid ${inpBd};background:transparent;color:inherit;font-size:12px;outline:none;padding:2px 0;font-family:inherit"
                             onmousedown="event.stopPropagation()" oninput="_tmDetEditRespManual(this.value)">
                     </div>` : ''}
 
-                    <!-- Vencimento -->
-                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid ${metaBd}">
-                        <i class="fa-regular fa-calendar" style="font-size:10px;color:${iconClr};width:14px;text-align:center;flex-shrink:0"></i>
-                        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:80px;flex-shrink:0">Vencimento</span>
-                        <input type="date" id="tm-det-prazo" value="${prazoVal}"
-                            style="border:1px solid ${inpBd};border-radius:7px;padding:3px 8px;background:transparent;color:inherit;font-size:12px;cursor:pointer;outline:none;transition:border-color 0.2s"
-                            onfocus="this.style.borderColor='#3B55E6'" onblur="this.style.borderColor='${inpBd}'"
-                            onmousedown="event.stopPropagation()">
-                    </div>
-
-                    <!-- Início -->
-                    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px">
-                        <i class="fa-regular fa-clock" style="font-size:10px;color:${iconClr};width:14px;text-align:center;flex-shrink:0"></i>
-                        <span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.13em;color:${lblClr};min-width:80px;flex-shrink:0">Início</span>
-                        <input type="date" id="tm-det-inicio" value="${inicioVal}"
-                            style="border:1px solid ${inpBd};border-radius:7px;padding:3px 8px;background:transparent;color:inherit;font-size:12px;cursor:pointer;outline:none;transition:border-color 0.2s"
-                            onfocus="this.style.borderColor='#3B55E6'" onblur="this.style.borderColor='${inpBd}'"
-                            onmousedown="event.stopPropagation()">
+                    <!-- Datas — 2 colunas -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid ${metaBd}">
+                        <div style="display:flex;align-items:flex-start;gap:9px;padding:11px 14px;background:${metaBg}">
+                            <div style="width:26px;display:flex;justify-content:center;flex-shrink:0;padding-top:2px">
+                                <i class="fa-regular fa-calendar-check" style="font-size:10px;color:${iconClr}"></i>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+                                <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:${lblClr}">Vencimento</span>
+                                <input type="date" id="tm-det-prazo" value="${prazoVal}"
+                                    style="border:none;background:transparent;color:inherit;font-size:12px;cursor:pointer;outline:none;width:100%;padding:0;font-family:inherit"
+                                    onmousedown="event.stopPropagation()">
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:9px;padding:11px 14px;background:${metaBg};border-left:1px solid ${metaBd}">
+                            <div style="width:26px;display:flex;justify-content:center;flex-shrink:0;padding-top:2px">
+                                <i class="fa-regular fa-clock" style="font-size:10px;color:${iconClr}"></i>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+                                <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:${lblClr}">Início</span>
+                                <input type="date" id="tm-det-inicio" value="${inicioVal}"
+                                    style="border:none;background:transparent;color:inherit;font-size:12px;cursor:pointer;outline:none;width:100%;padding:0;font-family:inherit"
+                                    onmousedown="event.stopPropagation()">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <hr style="border:none;border-top:1px solid ${metaBd};margin:0 0 18px">
-
                 <!-- Descrição -->
                 <div class="tdp-section">
-                    <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.15em;color:${lblClr};margin-bottom:9px;display:flex;align-items:center;gap:6px">
-                        <i class="fa-solid fa-align-left" style="font-size:10px;color:${iconClr}"></i>Descrição
+                    <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
+                        <i class="fa-solid fa-align-left" style="font-size:10px;color:${iconClr}"></i>
+                        <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${lblClr}">Descrição</span>
                     </div>
                     <textarea id="tm-det-descricao" placeholder="Adicione uma descrição..."
-                        style="width:100%;min-height:72px;padding:10px 12px;border-radius:9px;border:1.5px solid ${inpBd};background:${isDarkDet ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)'};color:inherit;font-size:13px;line-height:1.5;resize:vertical;font-family:inherit;outline:none;transition:border-color 0.2s"
+                        style="width:100%;min-height:80px;padding:11px 13px;border-radius:10px;border:1.5px solid ${inpBd};background:${isDarkDet ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)'};color:inherit;font-size:13px;line-height:1.6;resize:vertical;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box"
                         onfocus="this.style.borderColor='#3B55E6'" onblur="this.style.borderColor='${inpBd}'"
                         onmousedown="event.stopPropagation()">${DOMPurify.sanitize(t.descricao||'')}</textarea>
                 </div>
@@ -5045,13 +5058,18 @@
                 <!-- Checklist -->
                 <div class="tdp-section">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                        <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.15em;color:${lblClr};display:flex;align-items:center;gap:6px">
-                            <i class="fa-solid fa-list-check" style="font-size:10px;color:${iconClr}"></i>Checklist
-                            ${subTotal ? `<span style="padding:1px 7px;border-radius:6px;background:rgba(99,102,241,0.1);color:#6366f1;font-size:10px;letter-spacing:0;font-weight:700">${subDone}/${subTotal}</span>` : ''}
+                        <div style="display:flex;align-items:center;gap:7px">
+                            <i class="fa-solid fa-list-check" style="font-size:10px;color:${iconClr}"></i>
+                            <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${lblClr}">Checklist</span>
+                            ${subTotal ? `<span style="padding:2px 8px;border-radius:20px;background:rgba(59,85,230,0.12);color:#3B55E6;font-size:10px;font-weight:700;letter-spacing:0">${subDone}/${subTotal}</span>` : ''}
                         </div>
-                        <div style="display:flex;align-items:center;gap:4px">
-                            <button class="tdp-btn-ghost" onclick="_tmDetClearChecklist()" style="font-size:10px;padding:2px 8px">Limpar</button>
-                            <button class="tdp-btn-circle" onclick="_tmDetAddCheck()"><i class="fa-solid fa-plus"></i></button>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            ${subTotal ? `<div style="width:56px;height:3px;border-radius:2px;background:${isDarkDet ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'};overflow:hidden"><div style="height:100%;width:${pct}%;background:#3B55E6;border-radius:2px"></div></div>` : ''}
+                            <button class="tdp-btn-ghost" onclick="_tmDetClearChecklist()"
+                                style="font-size:10px;padding:3px 8px;border-radius:6px;transition:background 0.15s"
+                                onmouseover="this.style.background='${isDarkDet ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'}'"
+                                onmouseout="this.style.background='none'">Limpar</button>
+                            <button class="tdp-btn-circle" onclick="_tmDetAddCheck()" title="Adicionar item" style="width:24px;height:24px;font-size:9px"><i class="fa-solid fa-plus"></i></button>
                         </div>
                     </div>
                     <div id="tm-det-checklist"></div>
@@ -5649,7 +5667,7 @@
 
                 // 4. html2canvas captura
                 const canvas = await html2canvas(container, {
-                    backgroundColor: document.documentElement.classList.contains('dark') ? '#060a13' : '#F3F4F6',
+                    backgroundColor: document.documentElement.classList.contains('dark') ? '#0f0f0f' : '#F3F4F6',
                     scale: 2, // Alta resolução (2x)
                     useCORS: true,
                     logging: false,
@@ -6286,8 +6304,8 @@
             <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid rgba(100,116,139,0.12);flex-shrink:0;position:relative;z-index:1;margin-top:3px">
                 <button onclick="_tmDetClose()" title="Voltar"
                     style="background:none;border:none;cursor:pointer;color:#64748b;font-size:15px;padding:6px 8px;border-radius:8px;line-height:1;transition:background 0.15s,color 0.15s"
-                    onmouseover="this.style.background='rgba(100,116,139,0.1)';this.style.color='#0f172a'"
-                    onmouseout="this.style.background='none';this.style.color='#64748b'">
+                    onmouseover="this.style.background='rgba(100,116,139,0.1)'"
+                    onmouseout="this.style.background='none'">
                     <i class="fa-solid fa-arrow-left"></i>
                 </button>
                 <span style="flex:1;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:#64748b">Detalhe da Tarefa</span>
