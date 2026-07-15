@@ -8,8 +8,8 @@
 // ===== CONFIG =====
 const N8N_BASE_URL = '/api';
 const GATEWAY_ENDPOINT = '/api-admin-gateway';
-const COST_PER_DIAGNOSTIC = 0.05; // R$ estimate per diagnostic
-const PLAN_PRICING = { parceiro: 0, essencial: 197, profissional: 397, enterprise: 0, premium: 0, consultor: 0 };
+const COST_PER_DIAGNOSTIC = 0.70; // R$ estimate per diagnostic (~US$0.12)
+const PLAN_PRICING = { parceiro: 0, consultor: 0, essencial: 197, profissional: 397, enterprise: null, premium: null, estrategico: null };
 
 // All actions hit n8n backend.
 const ACTION_MAP = {
@@ -160,6 +160,7 @@ async function adminGateway(acao, params = {}) {
             body: JSON.stringify({
                 acao: n8nAction,
                 admin_id: sessionStorage.getItem('giif_admin_id'),
+                admin_nome: sessionStorage.getItem('giif_admin_nome') || '',
                 ...params
             })
         });
@@ -245,11 +246,13 @@ function normalizeResponse(action, data) {
             case 'listar_billing':
                 return data.map(d => {
                     const planoBase = (d.plano || '').startsWith('essencial') ? 'essencial' : (d.plano || '');
+                    const backendValor = d.valor_pago !== null && d.valor_pago !== undefined ? parseFloat(d.valor_pago) : null;
+                    const planoValor = PLAN_PRICING[planoBase];
                     return {
                         ...d,
                         diagnosticos: parseInt(d.diagnosticos) || 0,
                         custo_estimado: parseFloat(d.custo_estimado) || 0,
-                        valor_pago: parseFloat(d.valor_pago) || PLAN_PRICING[planoBase] || 0
+                        valor_pago: backendValor !== null ? backendValor : (planoValor !== undefined ? planoValor : null)
                     };
                 });
             case 'listar_health':
@@ -667,9 +670,11 @@ async function submitResetPassword(event) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
+    const targetUser = adminState.users.find(u => u.id === userId);
     const data = await adminGateway('resetar_senha', {
         target_user_id: userId,
-        nova_senha: novaSenha
+        nova_senha: novaSenha,
+        target_user_nome: targetUser?.nome || ''
     });
 
     // Verifica se houve sucesso (n8n retorna sucesso true)
@@ -801,8 +806,10 @@ async function deleteUser(id) {
 
     try {
         // 2. Disparo para o n8n (com a variável target_user_id cravada)
+        const targetUser = adminState.users.find(u => u.id === id);
         const res = await adminGateway('excluir_usuario', {
-            target_user_id: id
+            target_user_id: id,
+            target_user_nome: targetUser?.nome || ''
         });
 
         // 3. Resposta e Atualização Visual
@@ -827,38 +834,54 @@ async function loadBilling() {
     if (!data) return;
     adminState.billing = data;
 
-    // KPIs
-    const totalReceita = data.reduce((s, d) => s + d.valor_pago, 0);
+    // KPIs — only count clients with fixed prices (essencial/profissional/parceiro)
+    const pagantes = data.filter(d => d.valor_pago !== null && d.valor_pago > 0);
+    const totalReceita = pagantes.reduce((s, d) => s + d.valor_pago, 0);
     const totalCusto = data.reduce((s, d) => s + d.custo_estimado, 0);
-    const margem = totalReceita > 0 ? ((1 - totalCusto / totalReceita) * 100).toFixed(1) : 0;
-    const ticketMedio = data.filter(d => d.valor_pago > 0).length > 0
-        ? (totalReceita / data.filter(d => d.valor_pago > 0).length).toFixed(0) : 0;
+    const margem = totalReceita > 0 ? ((1 - totalCusto / totalReceita) * 100).toFixed(1) : '—';
+    const ticketMedio = pagantes.length > 0 ? (totalReceita / pagantes.length).toFixed(0) : 0;
 
     document.getElementById('billing-receita').textContent = `R$ ${totalReceita.toLocaleString('pt-BR')}`;
     document.getElementById('billing-custo').textContent = `R$ ${totalCusto.toFixed(2)}`;
-    document.getElementById('billing-margem').textContent = `${margem}%`;
-    document.getElementById('billing-ticket').textContent = `R$ ${parseInt(ticketMedio).toLocaleString('pt-BR')}`;
+    document.getElementById('billing-margem').textContent = margem !== '—' ? `${margem}%` : '—';
+    document.getElementById('billing-ticket').textContent = ticketMedio > 0 ? `R$ ${parseInt(ticketMedio).toLocaleString('pt-BR')}` : '—';
 
-    // Table
+    // Separate paying clients from consultores/parceiros for visual grouping
+    const clientes = data.filter(d => d.role !== 'consultor' && (d.plano || '') !== 'parceiro');
+    const parceiros = data.filter(d => d.role === 'consultor' || (d.plano || '') === 'parceiro');
+
     const tbody = document.getElementById('billing-table-body');
-    tbody.innerHTML = data.map(d => {
-        const roi = d.valor_pago > 0 ? ((d.valor_pago / Math.max(d.custo_estimado, 0.01))).toFixed(1) : '—';
-        const roiClass = d.valor_pago > d.custo_estimado ? 'roi-positive' : (d.valor_pago > 0 ? 'roi-negative' : '');
+
+    const renderRow = (d, isConsultor) => {
+        const valorPago = d.valor_pago;
+        const receitaDisplay = valorPago === null ? '<span style="color:#94a3b8;font-style:italic">A definir</span>'
+            : `R$ ${valorPago.toLocaleString('pt-BR')}`;
+        const roi = valorPago === null || d.diagnosticos === 0 ? '—'
+            : (valorPago / Math.max(d.custo_estimado, 0.01)).toFixed(1) + 'x';
+        const roiClass = valorPago !== null && valorPago > d.custo_estimado && d.diagnosticos > 0 ? 'roi-positive' : '';
+        const rowStyle = isConsultor ? 'opacity:0.7;border-top:1px dashed #334155' : '';
         return `
-            <tr>
+            <tr style="${rowStyle}">
                 <td class="brand">${esc(d.nome)}</td>
                 <td>${esc(d.empresa)}</td>
-                <td><span class="badge badge-${esc(d.plano)}">${esc(d.plano)}</span></td>
+                <td><span class="badge badge-${esc((d.plano||'').split('_')[0])}">${esc(d.plano)}</span></td>
                 <td style="text-align:center;font-weight:800">${d.diagnosticos}</td>
                 <td>R$ ${d.custo_estimado.toFixed(2)}</td>
-                <td style="font-weight:800">R$ ${d.valor_pago.toLocaleString('pt-BR')}</td>
-                <td class="${roiClass}" style="text-align:center">${roi}x</td>
+                <td style="font-weight:800">${receitaDisplay}</td>
+                <td class="${roiClass}" style="text-align:center">${roi}</td>
             </tr>
         `;
-    }).join('');
+    };
 
-    // Chart
-    initBillingChart(data);
+    let html = clientes.map(d => renderRow(d, false)).join('');
+    if (parceiros.length > 0) {
+        html += `<tr><td colspan="7" style="padding:8px 12px;font-size:11px;color:#64748b;font-weight:600;letter-spacing:.05em;background:rgba(100,116,139,.08)">CONSULTORES / PARCEIROS</td></tr>`;
+        html += parceiros.map(d => renderRow(d, true)).join('');
+    }
+    tbody.innerHTML = html;
+
+    // Chart — only clients with value defined
+    initBillingChart(clientes);
 }
 
 function initBillingChart(data) {
