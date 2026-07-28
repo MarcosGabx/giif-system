@@ -639,44 +639,38 @@ O tema é controlado por `html.dark` (classe no elemento raiz) e `localStorage.g
 
 **Arquivo:** `GIIF - Gateway Master Update (Corrigido) v9_FINAL.json` (em Downloads)
 
-### 15.3 ⚠ Migração Urgente — `mapas_estrategicos` → `mapas_projetos`
+### 15.3 Migração `mapas_estrategicos` → `mapas_projetos` — Concluída
 
-**Situação verificada:** `mapas_estrategicos` tem **57 linhas** de mapas de usuários que existem no sistema antigo (single-map) mas são **invisíveis** no sistema atual (multi-map). Esses usuários entram e não veem nenhum mapa.
+**Situação verificada em 2026-07-28:**
 
-**`mapas_estrategicos` schema verificado:**
-- `usuario_id` UUID NOT NULL (sem PK declarada além disso — constraint UNIQUE implícita no ON CONFLICT)
-- `mapa_json` jsonb NOT NULL
-- `atualizado_em` timestamp NULL DEFAULT now()
+| Tabela | Linhas | Status |
+|---|---|---|
+| `mapas_estrategicos` (legado) | 1 | Único usuário legado |
+| `mapas_projetos` (ativo) | 34 | Sistema em uso |
+| Usuários já migrados | 1 | O único usuário legado já tem mapa no sistema novo |
+| `logs_atividade` | 57 | (o 57 inicial foi mal interpretado — era desta tabela) |
 
-**Script de migração — rodar via `docker exec -it giif_postgres psql -U n8n`:**
+**Não há dados para migrar.** O único usuário presente em `mapas_estrategicos` já possui entrada em `mapas_projetos`. A tabela legada pode ser dropada ou mantida sem impacto no sistema.
 
 ```sql
--- Pré-verificação
-SELECT COUNT(*) FROM mapas_estrategicos;         -- deve ser 57
-SELECT COUNT(*) FROM mapas_projetos;             -- quantos já existem
-
--- Migração: cada usuário legado ganha um mapa "Mapa Principal" no novo sistema
-INSERT INTO mapas_projetos (id, usuario_id, nome_mapa, mapa_json, data_criacao, data_atualizacao)
-SELECT
-  gen_random_uuid()::text,                       -- novo id varchar
-  usuario_id,                                    -- UUID nativo (compatível com mapas_projetos.usuario_id UUID)
-  'Mapa Principal',
-  mapa_json,
-  COALESCE(atualizado_em, NOW()),
-  NOW()
-FROM mapas_estrategicos me
+-- Verificar se existe algum usuário legado SEM mapa no sistema novo (deve retornar 0 rows)
+SELECT usuario_id FROM mapas_estrategicos me
 WHERE NOT EXISTS (
   SELECT 1 FROM mapas_projetos mp WHERE mp.usuario_id = me.usuario_id
 );
--- WHERE NOT EXISTS garante não criar duplicata para usuários que JÁ têm mapa no novo sistema
 
--- Pós-verificação
-SELECT COUNT(*) FROM mapas_projetos;             -- deve aumentar em até 57
+-- Opcional: dropar tabela legada
+-- DROP TABLE mapas_estrategicos;
 ```
 
-**Ações já concluídas (não precisam ser rodadas):**
+**`mapas_estrategicos` schema:**
+- `usuario_id` UUID NOT NULL
+- `mapa_json` jsonb NOT NULL
+- `atualizado_em` timestamp NULL DEFAULT now()
+
+**Ações confirmadas como já concluídas:**
 - ~~`ALTER TABLE usuarios_giif ADD COLUMN IF NOT EXISTS ultimo_acesso TIMESTAMP`~~ — coluna já existe
-- ~~`docs/create_logs_atividade.sql`~~ — tabela já existe
+- ~~`docs/create_logs_atividade.sql`~~ — tabela já existe (57 linhas de log)
 
 ---
 
