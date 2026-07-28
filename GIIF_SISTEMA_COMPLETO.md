@@ -1,6 +1,6 @@
 # GIIF System — Documentação Técnica Completa
 > Mapeamento de funcionalidades, banco de dados e organização de dados  
-> Gerado em: 2026-07-28 | Versão do workflow analisado: v9 (Corrigido)
+> Gerado em: 2026-07-28 | Versão do workflow analisado: v9 (Corrigido) | Schema verificado via `docker exec giif_postgres`
 
 ---
 
@@ -23,7 +23,7 @@
 | Orquestrador IA | n8n v2.15.0 (self-hosted) |
 | IA — Camada 1 | Anthropic Claude Haiku 4.5 (normalização de dados) |
 | IA — Camadas 2/3 | Anthropic Claude Sonnet 4.6 (análise aprofundada + global + PDF) |
-| Banco de dados | PostgreSQL via Supabase |
+| Banco de dados | PostgreSQL 14 (Docker `giif_postgres` na VM, user `n8n`) |
 | Hospedagem | Netlify (auto-deploy via push para `main` do repo `MarcosGabx/giif-system`) |
 | Auth | JWT HS256 implementado em Code nodes n8n (`crypto.createHmac`) |
 
@@ -107,20 +107,22 @@ Frontend armazena:
 
 ### 5.1 `usuarios_giif` — Tabela principal de usuários
 
-| Coluna | Tipo | Notas |
+| Coluna | Tipo real (verificado) | Notas |
 |---|---|---|
-| `id` | TEXT (PK) | UUID gerado pelo Postgres (`gen_random_uuid()::text`) |
-| `nome_completo` | TEXT | Nome completo |
-| `email` | TEXT (UNIQUE) | Email de login |
-| `senha_hash` | TEXT | Senha em texto simples (sem hash real — ver BUG pendente) |
-| `nome_empresa` | TEXT | Empresa do usuário |
-| `segmento` | TEXT | Segmento de mercado |
-| `plano` | TEXT | Ver tabela de planos abaixo |
-| `status` | TEXT | `'ativo'` / `'inativo'` |
-| `role` | TEXT | `'usuario'` / `'consultor'` / `'admin'` |
-| `is_parceiro` | BOOLEAN | Flag de parceiro/revendedor |
-| `criado_em` | TIMESTAMP | Auto-preenchido |
-| `ultimo_acesso` | TIMESTAMP | Atualizado a cada login |
+| `id` | `uuid` NOT NULL DEFAULT `gen_random_uuid()` | PK — UUID nativo |
+| `nome_completo` | `varchar` NULL | Nome completo |
+| `email` | `varchar` NULL (UNIQUE implícito) | Email de login |
+| `senha_hash` | `text` NULL | Senha em texto simples (sem hash real — BUG pendente) |
+| `nome_empresa` | `varchar` NULL | Empresa do usuário |
+| `segmento` | `varchar` NULL | Segmento de mercado |
+| `plano` | `varchar` NULL | Ver tabela de planos abaixo |
+| `status` | `varchar` NULL | `'ativo'` / `'inativo'` |
+| `role` | `varchar` NULL DEFAULT `'admin'` | `'usuario'` / `'consultor'` / `'admin'` |
+| `is_parceiro` | `boolean` NULL DEFAULT `false` | Flag de parceiro/revendedor |
+| `criado_em` | `timestamp` NULL DEFAULT `CURRENT_TIMESTAMP` | Auto-preenchido |
+| `ultimo_acesso` | `timestamp` NULL | Atualizado a cada login — **coluna já existe** |
+
+> **Nota de tipo:** `id` é UUID nativo. Em queries que comparam com colunas TEXT de outras tabelas, usar `id::text`. Em parâmetros `$N` de queryReplacement, PostgreSQL infere e faz o cast automaticamente.
 
 **Planos e limites de mapas:**
 
@@ -141,14 +143,24 @@ Frontend armazena:
 
 ### 5.2 `relatorios_ia` — Relatórios de diagnóstico
 
-| Coluna | Tipo | Notas |
+| Coluna | Tipo real (verificado) | Notas |
 |---|---|---|
-| `id` | UUID ou TEXT (PK) | |
-| `usuario_id` | TEXT | FK → `usuarios_giif.id` |
-| `modulo` | TEXT | `'estrategico'` / `'financeiro'` / `'comercial'` / `'marketing'` / `'pessoas'` / `'geral'` |
-| `data_geracao` | TIMESTAMP | Quando o relatório foi gerado |
-| `scores` | JSONB | Ex: `{ "nota_estrategico": 72, "nota_geral": 68 }` |
-| `relatorio_texto` | TEXT | Markdown gerado pela IA (pode ser grande) |
+| `id` | `uuid` NOT NULL DEFAULT `gen_random_uuid()` | PK |
+| `usuario_id` | `uuid` NULL | FK → `usuarios_giif.id` |
+| `modulo` | `varchar` NOT NULL | `'estrategico'` / `'financeiro'` / `'comercial'` / `'marketing'` / `'pessoas'` / `'geral'` |
+| `data_geracao` | `timestamp` NULL DEFAULT `now()` | Quando o relatório foi gerado |
+| `scores` | `jsonb` NULL | Ex: `{ "nota_estrategico": 72, "nota_geral": 68 }` |
+| `relatorio_texto` | `text` NULL | Markdown gerado pela IA (pode ser grande) |
+| `dados_entrada` | `text` NULL | Dados brutos do formulário de entrada |
+| `dados_normalizados` | `jsonb` NULL | Saída estruturada da normalização C1 (Haiku) |
+| `indicadores` | `jsonb` NULL | Indicadores extraídos pela IA |
+| `qualidade_dados` | `jsonb` NULL | Score de qualidade dos dados de entrada |
+| `resumo_estruturado` | `jsonb` NULL | Resumo em formato estruturado |
+| `ia_json_valido` | `boolean` NULL DEFAULT `true` | Flag de validade do JSON retornado pela IA |
+| `versao_prompt` | `text` NULL | Versão do prompt usado |
+| `modelo` | `text` NULL | Modelo de IA usado (ex: `claude-haiku-4-5`) |
+| `tipo_analise` | `text` NULL | `'inicial'` / `'aprofundada'` / `'global'` |
+| `camada` | `text` NULL | `'C1'` / `'C2'` / `'C3'` |
 
 Custo por diagnóstico: **R$ 0,70** (usado no billing admin).
 
@@ -156,28 +168,31 @@ Custo por diagnóstico: **R$ 0,70** (usado no billing admin).
 
 ### 5.3 `mapas_projetos` — Mapas estratégicos (multi-mapa)
 
-| Coluna | Tipo | Notas |
+| Coluna | Tipo real (verificado) | Notas |
 |---|---|---|
-| `id` | TEXT (PK) | Frontend gera: `mapa_TIMESTAMP_RANDOM` (ex: `mapa_1753635200_abc1`) |
-| `usuario_id` | TEXT | FK → `usuarios_giif.id` |
-| `nome_mapa` | TEXT | Nome exibido na aba |
-| `mapa_json` | JSONB | Estrutura Drawflow completa |
-| `data_criacao` | TIMESTAMP | Auto-preenchido |
-| `data_atualizacao` | TIMESTAMP | Atualizado no UPSERT |
+| `id` | `varchar` NOT NULL DEFAULT `gen_random_uuid()::text` | PK — string no formato UUID |
+| `usuario_id` | `uuid` NULL | FK → `usuarios_giif.id` — UUID nativo |
+| `nome_mapa` | `varchar` NOT NULL | Nome exibido na aba |
+| `mapa_json` | `jsonb` NULL | Estrutura Drawflow completa |
+| `data_criacao` | `timestamp` NULL DEFAULT `CURRENT_TIMESTAMP` | Auto-preenchido |
+| `data_atualizacao` | `timestamp` NULL DEFAULT `CURRENT_TIMESTAMP` | Atualizado no UPSERT |
 
-> **Nota:** Tabela legada `mapas_estrategicos` (single-map por usuário) está descontinuada. Se houver dados lá, migrar manualmente via SQL antes de deprecar a tabela.
+> **Atenção de tipo:** `usuario_id` é UUID nativo. Os parâmetros `$N` no queryReplacement enviam strings; PostgreSQL faz o cast automaticamente para UUID quando o destino é uma coluna UUID. Funciona para IDs no formato `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
+
+> **⚠ MIGRAÇÃO URGENTE:** A tabela `mapas_estrategicos` (legada, single-map) contém **57 linhas** de dados reais de usuários que não aparecem no sistema atual. Ver seção 15.3.
 
 ---
 
 ### 5.4 `consultor_clientes` — Vínculo consultor ↔ empresa
 
-| Coluna | Tipo | Notas |
+| Coluna | Tipo real (verificado) | Notas |
 |---|---|---|
-| `id` | SERIAL ou UUID (PK) | |
-| `consultor_id` | UUID | FK → `usuarios_giif.id` (tipo nativo UUID) |
-| `usuario_id` | UUID | FK → `usuarios_giif.id` (tipo nativo UUID) |
+| `id` | `text` NOT NULL DEFAULT `gen_random_uuid()::text` | PK |
+| `consultor_id` | `text` NULL | UUID do consultor armazenado como TEXT |
+| `usuario_id` | `text` NULL | UUID da empresa/cliente armazenado como TEXT |
+| `criado_em` | `timestamp` NULL DEFAULT `CURRENT_TIMESTAMP` | Auto-preenchido |
 
-> **Atenção de tipos:** `consultor_clientes.consultor_id` e `usuario_id` são UUID nativo. `usuarios_giif.id` é TEXT. Todas as comparações exigem cast explícito: `cc.consultor_id::text` ou `u.id::text`.
+> **Atenção de tipos (verificado):** `consultor_id` e `usuario_id` são TEXT, não UUID nativo. `usuarios_giif.id` é UUID nativo. O cast correto para joins é **`u.id::text = cc.consultor_id`** (cast UUID→TEXT), não o contrário.
 
 **Restrição:** `ON CONFLICT DO NOTHING` no INSERT previne duplicatas.
 
@@ -185,35 +200,35 @@ Custo por diagnóstico: **R$ 0,70** (usado no billing admin).
 
 ### 5.5 `tickets_suporte` — Chamados de suporte
 
-| Coluna | Tipo | Notas |
+| Coluna | Tipo real (verificado) | Notas |
 |---|---|---|
-| `id` | SERIAL (PK) | |
-| `usuario_id` | TEXT | FK → `usuarios_giif.id` |
-| `assunto` | TEXT | Título do chamado |
-| `categoria` | TEXT | Categoria selecionada pelo usuário |
-| `mensagem` | TEXT | Corpo do chamado |
-| `status` | TEXT | `'Aberto'` / `'Respondido'` / `'Encerrado'` |
-| `resposta_admin` | TEXT | Resposta do administrador |
-| `data_criacao` | TIMESTAMP | Auto-preenchido |
-| `data_atualizacao` | TIMESTAMP | Atualizado na resposta |
+| `id` | `uuid` NOT NULL DEFAULT `gen_random_uuid()` | PK |
+| `usuario_id` | `uuid` NULL | FK → `usuarios_giif.id` — UUID nativo |
+| `assunto` | `varchar` NOT NULL | Título do chamado |
+| `categoria` | `varchar` NOT NULL | Categoria selecionada pelo usuário |
+| `mensagem` | `text` NOT NULL | Corpo do chamado |
+| `status` | `varchar` NULL DEFAULT `'Aberto'` | `'Aberto'` / `'Respondido'` / `'Encerrado'` |
+| `resposta_admin` | `text` NULL | Resposta do administrador |
+| `data_criacao` | `timestamp` NULL DEFAULT `CURRENT_TIMESTAMP` | Auto-preenchido |
+| `data_atualizacao` | `timestamp` NULL | Atualizado na resposta |
 
 ---
 
 ### 5.6 `logs_atividade` — Auditoria de ações
 
-| Coluna | Tipo | Notas |
+| Coluna | Tipo real (verificado) | Notas |
 |---|---|---|
-| `id` | SERIAL (PK) | |
-| `ator_id` | TEXT | ID de quem executou a ação |
-| `ator_nome` | TEXT | Nome legível |
-| `ator_papel` | TEXT | `'admin'` / `'usuario'` / `'consultor'` |
-| `tipo_evento` | TEXT | Ver lista abaixo |
-| `modulo` | TEXT | Módulo afetado (opcional) |
-| `alvo_tipo` | TEXT | Tipo do objeto afetado (opcional) |
-| `alvo_id` | TEXT | ID do objeto afetado (opcional) |
-| `alvo_nome` | TEXT | Nome legível do objeto afetado (opcional) |
-| `metadados` | JSONB | Dados extras (ex: plano anterior/novo) |
-| `criado_em` | TIMESTAMP | Auto-preenchido |
+| `id` | `integer` NOT NULL (serial) | PK autoincrement |
+| `ator_id` | `text` NULL | ID de quem executou a ação |
+| `ator_nome` | `text` NULL | Nome legível |
+| `ator_papel` | `text` NULL | `'admin'` / `'usuario'` / `'consultor'` |
+| `tipo_evento` | `text` NOT NULL | Ver lista abaixo |
+| `modulo` | `text` NULL | Módulo afetado (opcional) |
+| `alvo_tipo` | `text` NULL | Tipo do objeto afetado (opcional) |
+| `alvo_id` | `text` NULL | ID do objeto afetado (opcional) |
+| `alvo_nome` | `text` NULL | Nome legível do objeto afetado (opcional) |
+| `metadados` | `jsonb` NULL | Dados extras (ex: plano anterior/novo) |
+| `criado_em` | `timestamp` NULL DEFAULT `now()` | Auto-preenchido |
 
 **Eventos auditados:**
 
@@ -226,23 +241,27 @@ Custo por diagnóstico: **R$ 0,70** (usado no billing admin).
 | `'usuario_excluido'` | Admin exclui usuário |
 | `'senha_resetada'` | Admin reseta senha |
 
-> **Script de criação:** `docs/create_logs_atividade.sql`  
-> **Coluna `ultimo_acesso`:** Adicionar com `ALTER TABLE usuarios_giif ADD COLUMN IF NOT EXISTS ultimo_acesso TIMESTAMP;` se não existir.
+> **Tabela já existe** — `docs/create_logs_atividade.sql` já foi executado.  
+> **`ultimo_acesso` já existe** em `usuarios_giif` — ALTER TABLE não é necessário.
 
 ---
 
-### 5.7 Relacionamentos entre tabelas
+### 5.7 Relacionamentos entre tabelas (tipos verificados)
 
 ```
-usuarios_giif (id TEXT)
-  ├── relatorios_ia.usuario_id → usuarios_giif.id
-  ├── mapas_projetos.usuario_id → usuarios_giif.id
-  ├── tickets_suporte.usuario_id → usuarios_giif.id
-  ├── logs_atividade.ator_id → usuarios_giif.id
+usuarios_giif (id UUID)
+  ├── relatorios_ia.usuario_id UUID     → direto (UUID = UUID)
+  ├── mapas_projetos.usuario_id UUID    → direto (UUID = UUID); $N via n8n: cast implícito
+  ├── tickets_suporte.usuario_id UUID   → direto (UUID = UUID); $N via n8n: cast implícito
+  ├── logs_atividade.ator_id TEXT       → cast necessário: u.id::text = la.ator_id
   └── consultor_clientes
-        ├── consultor_id UUID → usuarios_giif.id::uuid
-        └── usuario_id   UUID → usuarios_giif.id::uuid
+        ├── consultor_id TEXT → cast: u.id::text = cc.consultor_id  ✓
+        └── usuario_id   TEXT → cast: u.id::text = cc.usuario_id    ✓
 ```
+
+**Regra geral de cast em queries n8n:**
+- Column-to-column: sempre `u.id::text = cc.texto_col` (cast UUID → TEXT)
+- Parâmetros `$N`: PostgreSQL faz cast implícito baseado no tipo da coluna destino (funciona para UUIDs válidos)
 
 ---
 
@@ -554,12 +573,14 @@ O tema é controlado por `html.dark` (classe no elemento raiz) e `localStorage.g
 |---|---|---|
 | n8n 2.15.0: `process.env`/`$env`/`$vars` bloqueados em Code nodes | JWT secret não pode ser externalizado | Secret hardcoded nos nós |
 | `queryReplacement` strips parâmetros vazios | `$N` desalinhado quando parâmetros opcionais | Usar apenas parâmetros sempre presentes |
-| `usuarios_giif.id` é TEXT; `consultor_clientes.consultor_id/usuario_id` são UUID | `operator does not exist: uuid = text` | Cast explícito `::text` em todas as comparações |
+| Tipos mistos UUID/TEXT entre tabelas | `operator does not exist: uuid = text` em joins column-to-column | Cast correto: `u.id::text = cc.texto_col` (UUID→TEXT); parâmetros `$N` são imunes (PostgreSQL faz cast implícito) |
+| `usuarios_giif.id` UUID; `consultor_clientes.*_id` TEXT (verificado) | Join sem cast falha | **Regra:** sempre `u.id::text = cc.consultor_id` |
+| `DB: Listar Responsaveis Mapa`: cast errado `u.id = cc.consultor_id::text` (v8) | UUID = TEXT → erro ao listar responsáveis | **Corrigido no v9:** `u.id::text = cc.consultor_id` |
 | Drawflow: primeiro clique não reconhece pan | Usuário precisa clicar 2x para iniciar pan | Corrigido via Pointer Events API + `setPointerCapture` |
-| `DB: Listar Health Bruto`: `role = 'user'` (v8 sem correção) | Retorna 0 registros | **Corrigido no v9:** `role = 'usuario'` |
-| `DB: Excluir Mapa`: `AND usuario_id = $2` causa falha silenciosa para consultores (v8) | Mapa deletado volta no reload | **Corrigido no v9:** removido `AND usuario_id = $2` |
-| Consultor deleta mapa: JWT sobrescreve `usuario_id` com UUID do consultor | Mismatch com `usuario_id` do mapa (que é do cliente) | **Corrigido no v9:** DELETE usa apenas `id` |
-| Webhook `/api-gateway`: 3 rotas não existiam (v8) | `validar_sessao`, `listar_lobby_consultor`, `desvincular_consultor_empresa` retornavam vazio | **Corrigido no v9:** 3 rotas + nós adicionados |
+| `DB: Listar Health Bruto`: `role = 'user'` (v8) | Retorna 0 registros no Health Monitor | **Corrigido no v9:** `role = 'usuario'` |
+| `DB: Excluir Mapa`: `AND usuario_id = $2` (v8) | Mapa deletado por consultor volta no reload | **Corrigido no v9:** removido `AND usuario_id = $2` |
+| Webhook `/api-gateway`: 3 rotas ausentes (v8) | `validar_sessao`, `listar_lobby_consultor`, `desvincular_consultor_empresa` sem resposta | **Corrigido no v9:** rotas + nós criados |
+| `mapas_estrategicos` com 57 linhas legadas | Mapas de usuários antigos invisíveis no sistema atual | **⚠ Migração manual necessária** — ver seção 15.3 |
 
 ---
 
@@ -618,22 +639,44 @@ O tema é controlado por `html.dark` (classe no elemento raiz) e `localStorage.g
 
 **Arquivo:** `GIIF - Gateway Master Update (Corrigido) v9_FINAL.json` (em Downloads)
 
-### 15.3 Ações Manuais Necessárias (banco)
+### 15.3 ⚠ Migração Urgente — `mapas_estrategicos` → `mapas_projetos`
+
+**Situação verificada:** `mapas_estrategicos` tem **57 linhas** de mapas de usuários que existem no sistema antigo (single-map) mas são **invisíveis** no sistema atual (multi-map). Esses usuários entram e não veem nenhum mapa.
+
+**`mapas_estrategicos` schema verificado:**
+- `usuario_id` UUID NOT NULL (sem PK declarada além disso — constraint UNIQUE implícita no ON CONFLICT)
+- `mapa_json` jsonb NOT NULL
+- `atualizado_em` timestamp NULL DEFAULT now()
+
+**Script de migração — rodar via `docker exec -it giif_postgres psql -U n8n`:**
 
 ```sql
--- Adicionar coluna ultimo_acesso se não existir
-ALTER TABLE usuarios_giif ADD COLUMN IF NOT EXISTS ultimo_acesso TIMESTAMP;
+-- Pré-verificação
+SELECT COUNT(*) FROM mapas_estrategicos;         -- deve ser 57
+SELECT COUNT(*) FROM mapas_projetos;             -- quantos já existem
 
--- Criar tabela de logs se não existir (ver docs/create_logs_atividade.sql)
+-- Migração: cada usuário legado ganha um mapa "Mapa Principal" no novo sistema
+INSERT INTO mapas_projetos (id, usuario_id, nome_mapa, mapa_json, data_criacao, data_atualizacao)
+SELECT
+  gen_random_uuid()::text,                       -- novo id varchar
+  usuario_id,                                    -- UUID nativo (compatível com mapas_projetos.usuario_id UUID)
+  'Mapa Principal',
+  mapa_json,
+  COALESCE(atualizado_em, NOW()),
+  NOW()
+FROM mapas_estrategicos me
+WHERE NOT EXISTS (
+  SELECT 1 FROM mapas_projetos mp WHERE mp.usuario_id = me.usuario_id
+);
+-- WHERE NOT EXISTS garante não criar duplicata para usuários que JÁ têm mapa no novo sistema
 
--- Verificar dados em mapas_estrategicos (tabela legada)
-SELECT COUNT(*) FROM mapas_estrategicos;
--- Se > 0, migrar antes de deprecar:
-INSERT INTO mapas_projetos (id, usuario_id, nome_mapa, mapa_json, data_criacao)
-SELECT gen_random_uuid()::text, usuario_id, 'Mapa Migrado', mapa_json, atualizado_em
-FROM mapas_estrategicos
-ON CONFLICT DO NOTHING;
+-- Pós-verificação
+SELECT COUNT(*) FROM mapas_projetos;             -- deve aumentar em até 57
 ```
+
+**Ações já concluídas (não precisam ser rodadas):**
+- ~~`ALTER TABLE usuarios_giif ADD COLUMN IF NOT EXISTS ultimo_acesso TIMESTAMP`~~ — coluna já existe
+- ~~`docs/create_logs_atividade.sql`~~ — tabela já existe
 
 ---
 
