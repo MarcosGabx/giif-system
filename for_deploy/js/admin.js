@@ -639,7 +639,6 @@ async function submitCreateUser(event) {
         plano: planVal,
         role: form.querySelector('#new-user-role').value
     };
-    console.log('[DEBUG-TEMP] criar_usuario payload:', JSON.stringify(payload)); // DEBUG-TEMP — remover após confirmar causa do autofill
     const data = await adminGateway('criar_usuario', payload);
 
     const isSuccess = data && (data.sucesso || data.id);

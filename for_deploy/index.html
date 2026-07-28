@@ -4562,6 +4562,7 @@
 
             // If we deleted the active map, switch to the first one
             if (mapaId === mapaAtualId && mapasUsuario.length > 0) {
+                mapaAtualId = null; // evita fire-and-forget re-salvar o mapa recém deletado
                 trocarMapa(mapasUsuario[0].mapa_id);
             } else {
                 renderMapaTabs();
