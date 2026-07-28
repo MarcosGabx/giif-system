@@ -4360,10 +4360,9 @@
 
         function getMapaLimitePorPlano() {
             const plano = (_sessaoPlano || localStorage.getItem('giif_user_plano') || 'parceiro').toLowerCase();
-            if (plano === 'parceiro') return Infinity;
+            if (['parceiro', 'consultor', 'enterprise', 'premium', 'estrategico'].includes(plano)) return Infinity;
             if (plano.startsWith('essencial')) return 1;
             if (plano === 'profissional') return 4;
-            if (plano === 'enterprise') return 5;
             return 1;
         }
 
