@@ -4359,10 +4359,12 @@
         // --- MAPA ESTRATÉGICO (Drawflow Engine — Multi-Map) ---
 
         function getMapaLimitePorPlano() {
+            // Consultores sempre têm acesso ilimitado — o plano exibido é o do cliente, não o deles
+            if (_sessaoRole === 'consultor') return Infinity;
             const plano = (_sessaoPlano || localStorage.getItem('giif_user_plano') || 'parceiro').toLowerCase();
-            if (['parceiro', 'consultor', 'enterprise', 'premium', 'estrategico'].includes(plano)) return Infinity;
-            if (plano.startsWith('essencial')) return 1;
+            if (['parceiro', 'enterprise', 'premium', 'estrategico'].includes(plano)) return Infinity;
             if (plano === 'profissional') return 4;
+            if (plano.startsWith('essencial')) return 3;
             return 1;
         }
 
