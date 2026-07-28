@@ -4546,11 +4546,16 @@
 
             // Call backend to delete
             try {
-                await fetch(`${N8N_BASE_URL}/api-gateway`, {
+                const delRes = await fetch(`${N8N_BASE_URL}/api-gateway`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Authorization': `Bearer ${getToken()}` },
                     body: JSON.stringify({ acao: 'excluir_mapa', usuario_id: localStorage.getItem('giif_user_id'), mapa_id: mapaId })
                 });
+                const delData = await delRes.json().catch(() => ({}));
+                if (!delRes.ok || delData.sucesso === false) {
+                    console.warn('[excluirMapa] Backend rejeitou exclusão:', delData);
+                    showToast('Aviso: exclusão não confirmada pelo servidor. O mapa pode voltar ao recarregar.', 'error');
+                }
             } catch (e) { console.warn('Erro ao excluir mapa no backend:', e); }
 
             mapasUsuario = mapasUsuario.filter(m => m.mapa_id !== mapaId);
